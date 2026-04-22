@@ -24,7 +24,6 @@ public class GameEngine {
     public void start() {
         new AnimationTimer() {
             @Override
-
             public void handle(long now) {
                 if (current == null) return;
                 if (now - lastUpdate > fallDelay) {
@@ -163,7 +162,7 @@ public class GameEngine {
         }
     }
     public void rotateCCW() {
-        int[][] rotated = current.getRotatedCW();
+        int[][] rotated = current.getRotatedCCW();
 
         if (canPlace(rotated, current.x, current.y)) {
             current.shape = rotated;
