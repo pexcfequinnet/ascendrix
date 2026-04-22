@@ -9,14 +9,13 @@ public class InputHandler {
     public InputHandler(GameEngine game, Scene scene) {
         scene.setOnKeyPressed(e -> {
             switch (e.getCode()) {
-                case LEFT -> game.moveLeft();
-                case RIGHT -> game.moveRight();
-                case DOWN -> game.softDrop();
-                case UP -> game.rotate();
-                case Z -> game.rotate();
-                case X -> game.rotate();
-                case A -> game.rotate();
-                case SPACE -> game.hardDrop();
+                case A -> game.moveLeft();
+                case D -> game.moveRight();
+                case S -> game.softDrop();
+                case W -> game.hardDrop();
+                case K -> game.rotateCCW();
+                case L -> game.rotateCCW();
+                case J -> game.rotateCW();
             }
         });
     }
