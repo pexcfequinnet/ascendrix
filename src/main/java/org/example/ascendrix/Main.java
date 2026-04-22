@@ -19,9 +19,4 @@ public class Main extends Application {
         stage.show();
         engine.start(); // start GameLoop
     }
-
-    public static void main(String[] args) {
-        launch();
-    }
-
 }
