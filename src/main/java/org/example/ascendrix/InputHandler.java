@@ -13,9 +13,9 @@ public class InputHandler {
                 case D -> game.moveRight();
                 case S -> game.softDrop();
                 case W -> game.hardDrop();
-                case K -> game.rotateCCW();
-                case L -> game.rotateCCW();
-                case J -> game.rotateCW();
+                case J -> game.rotateCCW();
+                case L -> game.rotateCW();
+                case SHIFT -> game.hold();
             }
         });
     }

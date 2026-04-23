@@ -11,7 +11,7 @@ public class Main extends Application {
         GameRenderer renderer = new GameRenderer();
         GameEngine engine = new GameEngine(renderer);
 
-        Scene scene = new Scene(new Pane(renderer), 450, 600);
+        Scene scene = new Scene(new Pane(renderer), 525, 600);
         new InputHandler(engine, scene);
 
         stage.setTitle("Tetris test");
