@@ -32,7 +32,7 @@ public class TetrominoQueue {
         }
     }
 
-    // ===== Public API =====
+    // API: Next queue
 
     public TetrominoType next() {
         TetrominoType next = preview.poll();

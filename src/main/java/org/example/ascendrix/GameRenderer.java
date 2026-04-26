@@ -12,6 +12,7 @@ public class GameRenderer extends Canvas {
     private final int COLS = 10;
     private final int ROWS = 20;
     private final int OFFSET_X = 100; // Move entire board to the right to make space for hold and other stats
+
     public GameRenderer() {
         setWidth(COLS * TILE  + 200);
         setHeight(ROWS * TILE);
@@ -24,6 +25,12 @@ public class GameRenderer extends Canvas {
         gc.fillRect(0, 0, getWidth(), getHeight());
 
     }
+    public void renderBoardOverlay() {
+        GraphicsContext gc = getGraphicsContext2D();
+        gc.setFill(Color.color(0.5, 0.5, 0.5, 0.6)); // grey with ~60% opacity
+        gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
+    }
+
     public void renderGameplayUI(){
 
     }
@@ -51,7 +58,7 @@ public class GameRenderer extends Canvas {
         GraphicsContext gc = getGraphicsContext2D();
         if (current != null) {
             gc.setFill(current.type.color);
-            for (int[] p : current.getShape()) {
+            for (int[] p : current.getBlocks()) {
                 int x = OFFSET_X + (current.x + p[0]) * TILE;
                 int y = (current.y + p[1]) * TILE;
                 gc.fillRect(x, y, TILE, TILE);
@@ -63,18 +70,18 @@ public class GameRenderer extends Canvas {
 
         GraphicsContext gc = getGraphicsContext2D();
 
-        gc.setGlobalAlpha(0.3); // 🔥 mờ
+        gc.setGlobalAlpha(0.3);
 
         gc.setFill(current.type.color);
 
-        for (int[] p : current.getShape()) {
+        for (int[] p : current.getBlocks()) {
             int x = OFFSET_X + (current.x + p[0]) * TILE;
             int y = (ghostY + p[1]) * TILE;
 
             gc.fillRect(x, y, TILE, TILE);
         }
 
-        gc.setGlobalAlpha(1.0); // 🔥 reset
+        gc.setGlobalAlpha(1.0);
     }
     // Render next pieces
     public void renderNext(List<TetrominoType> preview) {
@@ -97,7 +104,7 @@ public class GameRenderer extends Canvas {
             int minX = Integer.MAX_VALUE;
             int minY = Integer.MAX_VALUE;
 
-            int[][] shape = type.shapes[0];
+            int[][] shape = type.blocks;
 
             for (int[] p : shape) {
                 minX = Math.min(minX, p[0]);
@@ -114,7 +121,7 @@ public class GameRenderer extends Canvas {
     public void renderHold(TetrominoType hold) {
         GraphicsContext gc = getGraphicsContext2D();
 
-        // Background vùng HOLD
+        //  Hold section bg
         gc.setFill(Color.BLACK);
         gc.fillRect(0, 0, OFFSET_X, getHeight());
 
@@ -128,7 +135,7 @@ public class GameRenderer extends Canvas {
 
         if (hold == null) return;
 
-        int[][] shape = hold.shapes[0];
+        int[][] shape = hold.blocks;
 
         int minX = Integer.MAX_VALUE;
         int minY = Integer.MAX_VALUE;
