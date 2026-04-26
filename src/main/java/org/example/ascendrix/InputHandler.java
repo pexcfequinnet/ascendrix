@@ -13,7 +13,6 @@ public class InputHandler {
 
     public InputHandler(BooleanSupplier isRunning) {
         this.isRunning = isRunning;
-        this.game = game;
     }
     // Previous frame snapshot
     private boolean prevRotateCW, prevRotateCCW, prevHardDrop, prevHold;

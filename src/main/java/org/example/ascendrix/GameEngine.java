@@ -35,9 +35,11 @@ public class GameEngine {
             @Override
             public void handle(long now) {
 
-                if (current == null) return;
+                if (isRunning()) {
+                    if (current == null) return;
+                    update();
+                }
 
-                update();   //logic
                 render();   //render
             }
 
@@ -89,8 +91,8 @@ public class GameEngine {
         holdUsed = false;
 
         if (!canPlace(piece.getBlocks(), piece.x, piece.y)) {
-            topOut();
             current = piece;
+            topOut();
             return;
         }
 
@@ -141,17 +143,7 @@ public class GameEngine {
 
         return linesCleared;
     }
-    // Remove filled line
-    private void removeLine(int line) {
-        for (int y = line; y > 0; y--) {
-            System.arraycopy(board[y - 1], 0, board[y], 0, COLS);
-        }
 
-        // Clear upper line
-        for (int x = 0; x < COLS; x++) {
-            board[0][x] = null;
-        }
-    }
     // Movement
     public void move(int dir) {
         if (canMove(current.x + dir, current.y)) {
@@ -168,8 +160,8 @@ public class GameEngine {
 
         int cleared = clearLines();
         totalLines += cleared;
-        if (canPlace(current.getBlocks(), current.x, current.y))
-            spawnBlock();
+
+        spawnBlock();
     }
     public void hardDrop() {
 
