@@ -12,6 +12,8 @@ public class GameRenderer extends Canvas {
     private final int COLS = 10;
     private final int ROWS = 20;
     private final int OFFSET_X = 100; // Move entire board to the right to make space for hold and other stats
+    public GameMode mode;
+    public GameState state;
 
     public GameRenderer() {
         setWidth(COLS * TILE  + 200);
@@ -25,17 +27,38 @@ public class GameRenderer extends Canvas {
         gc.fillRect(0, 0, getWidth(), getHeight());
 
     }
+    public void renderCountdown(GameState state, int countdown){
+        GraphicsContext g = getGraphicsContext2D();
+
+        if (state == GameState.COUNT_DOWN) {
+
+            String text;
+
+            if (countdown > 1) {
+                text = String.valueOf(countdown);
+            } else if (countdown == 1) {
+                text = "READY";
+            } else {
+                text = "GO";
+            }
+
+            g.fillText(text, 200, 300);
+        }
+    }
     public void renderBoardOverlay() {
         GraphicsContext gc = getGraphicsContext2D();
-        gc.setFill(Color.color(0.5, 0.5, 0.5, 0.6)); // grey with ~60% opacity
+        gc.setFill(Color.color(0.5, 0.5, 0.5, 0.8)); // grey with ~60% opacity
         gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
     }
 
-    public void renderGameplayUI(){
-
+    public void renderHUD(GameTimer timer){
+        GraphicsContext gc = getGraphicsContext2D();
+        if (mode != null) {
+            mode.renderHUD(gc, timer);
+        }
     }
     // Render board
-    public void renderBoard(TetrominoType[][] board){
+    public void renderBoard(TetrominoType[][] board) {
         GraphicsContext gc = getGraphicsContext2D();
         gc.setFill(Color.BLACK);
         gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
@@ -155,4 +178,7 @@ public class GameRenderer extends Canvas {
         }
     }
 
+    public void setMode(GameMode mode) {
+        this.mode = mode;
+    }
 }

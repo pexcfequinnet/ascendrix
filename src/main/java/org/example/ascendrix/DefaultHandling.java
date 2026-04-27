@@ -47,6 +47,9 @@ public class DefaultHandling implements Handling{
             lastSdfFrame = -1;
             return;
         }
+        if (config.instantSdf)
+            while (!game.isOnGround())
+               game.softDrop();
 
         if (lastSdfFrame == -1 || frame - lastSdfFrame >= config.sdfFrames) {
             game.softDrop();

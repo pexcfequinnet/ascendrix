@@ -3,53 +3,73 @@ package org.example.ascendrix;
 import javafx.animation.AnimationTimer;
 
 public class GameEngine {
+    // Input Handling
+    public InputHandler input;
+    // Mode Handling: Define movement and game rules
+    public GameMode mode;
+    private final Ruleset ruleset;
+    public Handling handling;
+    // Board handling
     private final int COLS = 10;
     private final int ROWS = 20;
     private static final int SPAWN_X = 3;
-    public InputHandler input;
     private final TetrominoType [][] board = new TetrominoType[ROWS][COLS];
+    // Tetromino + Bag queue handling
     private TetrominoHandler current;
     private final TetrominoQueue queue;
-    private final Ruleset ruleset;
     private TetrominoType holdPiece = null;
+    // Hold slot + Line clear handling
     public int totalLines = 0;
     private boolean holdUsed = false;
+    // Render + Game state handling
     private final GameRenderer renderer;
     private long frame = 0;
-    private GameState state = GameState.RUNNING;
+    private GameState state;
 
+    // Game timer handling
+    private int countdown = 1;
+    private long lastTick = 0;
+    public GameTimer timer = new GameTimer();
+
+    /* ============================== ALL FUNCTIONS ============================== */
     public void setInput(InputHandler input) {
         this.input = input;
     }
-    public GameEngine(GameRenderer renderer, Ruleset ruleset, DefaultHandling handling) {
-        this.renderer = renderer;
+    public GameEngine(GameRenderer renderer, Ruleset ruleset, GameMode mode) {
+        this.mode = mode;
         this.ruleset = ruleset;
+        this.handling = ruleset.handling;
+        renderer.setMode(mode);
         queue = new TetrominoQueue();
-
         spawnBlock();
+
+        this.renderer = renderer;
     }
 
     public void start() {
         new AnimationTimer() {
-
             @Override
             public void handle(long now) {
 
-                if (isRunning()) {
-                    if (current == null) return;
-                    update();
+                if (state == GameState.COUNT_DOWN) {
+                    updateCountdown();
                 }
 
-                render();   //render
-            }
+                if (state == GameState.RUNNING) {
+                    if (current != null) {
+                        update();
+                    }
+                }
 
+                render();
+            }
         }.start();
     }
+    // Rendering function: Initialize the game
     private void render() {
         renderer.renderBackground();
         renderer.renderBoard(board);
-
-        if (getState() != GameState.RUNNING) {
+        if (getState() == GameState.GAME_OVER) {
             renderer.renderBoardOverlay();
         }
         renderer.renderGhostPiece(current, getGhostY());
@@ -57,20 +77,24 @@ public class GameEngine {
 
         renderer.renderNext(queue.getPreview());
         renderer.renderHold(holdPiece);
-        renderer.renderGameplayUI();
+
+        renderer.renderHUD(timer);
+        renderer.renderCountdown(state, countdown);
     }
     public GameState getState() { return state; }
     public boolean isRunning() { return state == GameState.RUNNING; }
 
     public void end() {         // called by GameMode when goal is reached
         state = GameState.GAME_CLEARED;
+        timer.pause();
     }
     public void topOut() {      // called when a piece can't spawn
         state = GameState.GAME_OVER;
+        timer.pause();
     }
 
     private void update() {
-
+        // Frame-based render system
         ruleset.handling.update(frame, input, this);
         ruleset.gravity.update(frame, this);
         ruleset.lockDelay.update(frame, this);
@@ -79,10 +103,9 @@ public class GameEngine {
 
     // Vertical piece offset
     private int getSpawnYOffset(TetrominoType type) {
-        return switch (type) {
-            case I -> -1;
-            default -> 0;
-        };
+        if(type == TetrominoType.I)
+            return -1;
+        return 0;
     }
 
     private void spawnBlock() {
@@ -160,8 +183,6 @@ public class GameEngine {
 
         int cleared = clearLines();
         totalLines += cleared;
-
-        spawnBlock();
     }
     public void hardDrop() {
 
@@ -174,9 +195,53 @@ public class GameEngine {
         int cleared = clearLines();
         totalLines += cleared;
 
+    }
+    private void lockBlock() {
+
+        for (int[] p : current.getBlocks()) {
+            int x = current.x + p[0];
+            int y = current.y + p[1];
+            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+                board[y][x] = current.type;
+            }
+        }
+        int cleared = clearLines();
+
+        if (cleared > 0) {
+            mode.onLinesCleared(cleared, this);
+        }
         spawnBlock();
     }
 
+    public void tryFall() {
+        if (canMove(current.x, current.y + 1)) {
+            current.y++;
+        }
+    }
+
+    public boolean isOnGround() {
+        return !canMove(current.x, current.y + 1);
+    }
+    public boolean canPlace(int[][] shape, int newX, int newY) {
+        for (int[] p : shape) {
+            int x = newX + p[0];
+            int y = newY + p[1];
+
+            if (x < 0 || x >= COLS || y >= ROWS) return false;
+            if (y >= 0 && board[y][x] != null) return false;
+        }
+        return true;
+    }
+    // Ghost piece handler
+    public int getGhostY() {
+        int y = current.y;
+
+        while (canMove(current.x, y + 1)) {
+            y++;
+        }
+
+        return y;
+    }
     public void notifyMoveOrRotate() {
         ruleset.lockDelay.onMoveOrRotate(frame);
     }
@@ -201,46 +266,27 @@ public class GameEngine {
         return canMove(current.x + dir, current.y);
     }
 
-    public boolean canPlace(int[][] shape, int newX, int newY) {
-        for (int[] p : shape) {
-            int x = newX + p[0];
-            int y = newY + p[1];
-
-            if (x < 0 || x >= COLS || y >= ROWS) return false;
-            if (y >= 0 && board[y][x] != null) return false;
-        }
-        return true;
+    public int getCountdown() {
+        return countdown;
     }
-    // Ghost piece handler
-    public int getGhostY() {
-        int y = current.y;
-
-        while (canMove(current.x, y + 1)) {
-            y++;
-        }
-
-        return y;
+    public void startCountdown() {
+        state = GameState.COUNT_DOWN;
+        countdown = 1;
+        lastTick = System.currentTimeMillis();
     }
+    private void updateCountdown() {
+        long now = System.currentTimeMillis();
 
-    private void lockBlock() {
+        if (now - lastTick >= 1000) {
+            countdown--;
+            lastTick = now;
 
-        for (int[] p : current.getBlocks()) {
-            int x = current.x + p[0];
-            int y = current.y + p[1];
-            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
-                board[y][x] = current.type;
+            if (countdown < 0) {
+                state = GameState.RUNNING;
+                timer.reset();
+                timer.start();
             }
         }
-    }
-
-    public void tryFall() {
-        if (canMove(current.x, current.y + 1)) {
-            current.y++;
-        }
-    }
-
-    public boolean isOnGround() {
-        return !canMove(current.x, current.y + 1);
     }
 }
 

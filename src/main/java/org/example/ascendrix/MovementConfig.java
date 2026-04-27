@@ -6,4 +6,5 @@ public class MovementConfig {
     public int sdfFrames;
 
     public boolean instantArr;
+    public boolean instantSdf;
 }
