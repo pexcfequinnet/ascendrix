@@ -5,41 +5,51 @@ import javafx.animation.AnimationTimer;
 public class GameEngine {
     // Input Handling
     public InputHandler input;
-    // Mode Handling: Define movement and game rules
-    public GameMode mode;
-    private final Ruleset ruleset;
-    public Handling handling;
     // Board handling
     private final int COLS = 10;
     private final int ROWS = 20;
     private static final int SPAWN_X = 3;
     private final TetrominoType [][] board = new TetrominoType[ROWS][COLS];
     // Tetromino + Bag queue handling
+    private boolean spawning = false;
     private TetrominoHandler current;
     private final TetrominoQueue queue;
     private TetrominoType holdPiece = null;
     // Hold slot + Line clear handling
     public int totalLines = 0;
     private boolean holdUsed = false;
-    // Render + Game state handling
+    // Render
     private final GameRenderer renderer;
-    private long frame = 0;
-    private GameState state;
+    private long lastUpdate = -1;
+    private long tick = 0;
 
-    // Game timer handling
-    private int countdown = 1;
-    private long lastTick = 0;
-    public GameTimer timer = new GameTimer();
+    // Game state handling
+    public GameState state;
+    public GameModeHandler mode_handler;
+    public GameRuntimeState runtime_state;
+    private final InputBuffer inputBuffer = new InputBuffer();
+    public GamePhase phase;
 
+    // Mode Handling: Define movement and game rules
+    private final RulesetHandler rulesetHandler;
+    public Handling handling;
+    // Countdown timer
+    public int countdown = 1;
+    private long lastTick;
+    public GameTimer timer = new GameTimer(); // Timer
     /* ============================== ALL FUNCTIONS ============================== */
+    public InputBuffer getInputBuffer() {
+        return inputBuffer;
+    }
+
     public void setInput(InputHandler input) {
         this.input = input;
     }
-    public GameEngine(GameRenderer renderer, Ruleset ruleset, GameMode mode) {
-        this.mode = mode;
-        this.ruleset = ruleset;
-        this.handling = ruleset.handling;
-        renderer.setMode(mode);
+    public GameEngine(GameRenderer renderer, RulesetHandler rulesetHandler, GameModeHandler modeHandler) {
+        this.rulesetHandler = rulesetHandler;
+        this.handling = rulesetHandler.handling;
+        this.mode_handler = modeHandler;
+
         queue = new TetrominoQueue();
         spawnBlock();
 
@@ -47,24 +57,22 @@ public class GameEngine {
     }
 
     public void start() {
-        new AnimationTimer() {
-            @Override
-            public void handle(long now) {
+        phase = GamePhase.COUNTDOWN; // ← initialize phase
+        lastTick = System.currentTimeMillis();
 
-                if (state == GameState.COUNT_DOWN) {
+        new AnimationTimer() {
+            public void handle(long now) {
+                if (phase == GamePhase.COUNTDOWN) {
                     updateCountdown();
                 }
-
-                if (state == GameState.RUNNING) {
-                    if (current != null) {
-                        update();
-                    }
+                if (phase == GamePhase.PLAYING) {
+                    update(now);
                 }
-
                 render();
             }
         }.start();
     }
+
     // Rendering function: Initialize the game
     private void render() {
         renderer.renderBackground();
@@ -78,13 +86,13 @@ public class GameEngine {
         renderer.renderNext(queue.getPreview());
         renderer.renderHold(holdPiece);
 
-        renderer.renderHUD(timer);
-        renderer.renderCountdown(state, countdown);
+        renderer.renderHUD(mode_handler,timer);
+        renderer.renderCountdown(phase, countdown);
     }
     public GameState getState() { return state; }
     public boolean isRunning() { return state == GameState.RUNNING; }
 
-    public void end() {         // called by GameMode when goal is reached
+    public void end() {         // called by GameModeHandler when goal is reached
         state = GameState.GAME_CLEARED;
         timer.pause();
     }
@@ -93,21 +101,33 @@ public class GameEngine {
         timer.pause();
     }
 
-    private void update() {
-        // Frame-based render system
-        ruleset.handling.update(frame, input, this);
-        ruleset.gravity.update(frame, this);
-        ruleset.lockDelay.update(frame, this);
-        frame++;
-    }
+    private void update(long now) {
+        if (lastUpdate == -1) {
+            lastUpdate = now;
+        }
 
+        long delta = now - lastUpdate;
+        lastUpdate = now;
+
+        if (delta > 100_000_000) {
+            delta = 100_000_000;
+        }
+        // Time-based render system
+        rulesetHandler.handling.update(now, input, this);
+        rulesetHandler.gravity.update(now, this);
+        rulesetHandler.lockDelay.update(now, this);
+        tick++;
+    }
+    /* ========================== GAME LOGIC  ========================== */
     // Vertical piece offset
     private int getSpawnYOffset(TetrominoType type) {
         if(type == TetrominoType.I)
             return -1;
         return 0;
     }
-
+    public boolean isSpawning() {
+        return spawning;
+    }
     private void spawnBlock() {
         TetrominoType type = queue.next();
         TetrominoHandler piece = new TetrominoHandler(type, SPAWN_X, getSpawnYOffset(type));
@@ -118,9 +138,9 @@ public class GameEngine {
             topOut();
             return;
         }
-
+        spawning = true;
         current = piece;
-
+        spawning = false;
     }
     public void hold() {
         if (holdUsed) return;
@@ -171,12 +191,15 @@ public class GameEngine {
     public void move(int dir) {
         if (canMove(current.x + dir, current.y)) {
             current.x += dir;
-            notifyMoveOrRotate();
+            notifyMoveOrRotate(System.nanoTime());
         }
     }
 
-    public void softDrop() {
-        if (canMove(current.x, current.y + 1)) current.y++;
+    public void softDrop(long now) {
+        if (canMove(current.x, current.y + 1)) {
+            current.y++;
+            notifyMoveOrRotate(now);
+        }
     }
     public void lock() {
         lockBlock();
@@ -184,17 +207,23 @@ public class GameEngine {
         int cleared = clearLines();
         totalLines += cleared;
     }
-    public void hardDrop() {
+    public void hardDrop(long now) {
 
         int y = current.y;
-        while (canMove(current.x, y + 1)) y++;
+
+        while (canMove(current.x, y + 1)) {
+            y++;
+        }
+
         current.y = y;
 
+        // Important: notify lock system
+        notifyMoveOrRotate(now);
+
         lockBlock();
-        // Clear line after lock delay ends
+
         int cleared = clearLines();
         totalLines += cleared;
-
     }
     private void lockBlock() {
 
@@ -208,15 +237,17 @@ public class GameEngine {
         int cleared = clearLines();
 
         if (cleared > 0) {
-            mode.onLinesCleared(cleared, this);
+            mode_handler.onLinesCleared(cleared, this);
         }
         spawnBlock();
     }
 
-    public void tryFall() {
+    public boolean tryFall() {
         if (canMove(current.x, current.y + 1)) {
             current.y++;
+            return true;
         }
+        return false;
     }
 
     public boolean isOnGround() {
@@ -242,20 +273,20 @@ public class GameEngine {
 
         return y;
     }
-    public void notifyMoveOrRotate() {
-        ruleset.lockDelay.onMoveOrRotate(frame);
+    public void notifyMoveOrRotate(long now) {
+        rulesetHandler.lockDelay.onMoveOrRotate(now);
     }
 
     public void rotateCW() {
         int prevRotation = current.rotation;
-        ruleset.rotationSystem.tryRotate(current, 1, this);
-        if (current.rotation != prevRotation) notifyMoveOrRotate();
+        rulesetHandler.rotationSystem.tryRotate(current, 1, this);
+        if (current.rotation != prevRotation) notifyMoveOrRotate(System.nanoTime());
     }
 
     public void rotateCCW() {
         int prevRotation = current.rotation;
-        ruleset.rotationSystem.tryRotate(current, -1, this);
-        if (current.rotation != prevRotation) notifyMoveOrRotate();
+        rulesetHandler.rotationSystem.tryRotate(current, -1, this);
+        if (current.rotation != prevRotation) notifyMoveOrRotate(System.nanoTime());
     }
 
     // Logic
@@ -266,15 +297,8 @@ public class GameEngine {
         return canMove(current.x + dir, current.y);
     }
 
-    public int getCountdown() {
-        return countdown;
-    }
-    public void startCountdown() {
-        state = GameState.COUNT_DOWN;
-        countdown = 1;
-        lastTick = System.currentTimeMillis();
-    }
-    private void updateCountdown() {
+    // Countdown + timer
+    public void updateCountdown() {
         long now = System.currentTimeMillis();
 
         if (now - lastTick >= 1000) {
@@ -282,7 +306,7 @@ public class GameEngine {
             lastTick = now;
 
             if (countdown < 0) {
-                state = GameState.RUNNING;
+                phase = GamePhase.PLAYING; // ← this is what unblocks update()
                 timer.reset();
                 timer.start();
             }

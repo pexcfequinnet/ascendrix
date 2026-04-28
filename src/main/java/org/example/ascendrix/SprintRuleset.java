@@ -1,16 +1,28 @@
 package org.example.ascendrix;
 
-public class SprintRuleset extends Ruleset{
-
-    private static final int GRAVITY_FRAMES = 30;
-    private static final int LOCK_FRAMES = 30;
-
+public class SprintRuleset extends RulesetHandler {
+    private static final long GRAVITY_NS = 500_000_000L; // 0.5s
+    private static final long LOCK_NS    = 500_000_000L; // 0.5s
     public SprintRuleset(Handling handling, RotationSystem rotationSystem) {
         super(
                 handling,
-                new SprintGravity(GRAVITY_FRAMES),
-                new SprintLockDelay(LOCK_FRAMES),
+                new SprintGravity(GRAVITY_NS),
+                new SprintLockDelay(LOCK_NS),
                 rotationSystem
+        );
+    }
+    public static MovementConfig sprintConfig(){
+        MovementConfig c = new MovementConfig();
+        c.dasNs = 100_000_000;
+        c.instantArr = true;
+        c.instantSdf = true;
+
+        return c;
+    }
+    public static SprintRuleset create() {
+        return new SprintRuleset(
+                new MovementSystem(sprintConfig()),
+                new StandardRotationSystem()
         );
     }
 }

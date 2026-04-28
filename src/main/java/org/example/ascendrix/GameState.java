@@ -7,3 +7,4 @@ public enum GameState {
     GAME_PAUSED,
     GAME_CLEARED
 }
+

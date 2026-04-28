@@ -3,14 +3,12 @@ package org.example.ascendrix;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
-public class SprintMode implements GameMode {
+public class SprintModeHandler implements GameModeHandler {
     private final int targetLines;
     private int linesCleared = 0;
-    private GameEngine game;
 
-    public SprintMode(int targetLines) {
+    public SprintModeHandler(int targetLines) {
         this.targetLines = targetLines;
-        this.game = game;
     }
     @Override
     public void onLinesCleared(int lines, GameEngine game) {

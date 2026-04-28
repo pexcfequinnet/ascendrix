@@ -12,8 +12,6 @@ public class GameRenderer extends Canvas {
     private final int COLS = 10;
     private final int ROWS = 20;
     private final int OFFSET_X = 100; // Move entire board to the right to make space for hold and other stats
-    public GameMode mode;
-    public GameState state;
 
     public GameRenderer() {
         setWidth(COLS * TILE  + 200);
@@ -27,10 +25,10 @@ public class GameRenderer extends Canvas {
         gc.fillRect(0, 0, getWidth(), getHeight());
 
     }
-    public void renderCountdown(GameState state, int countdown){
+    public void renderCountdown(GamePhase phase, int countdown){
         GraphicsContext g = getGraphicsContext2D();
 
-        if (state == GameState.COUNT_DOWN) {
+        if (phase == GamePhase.COUNTDOWN) {
 
             String text;
 
@@ -51,10 +49,10 @@ public class GameRenderer extends Canvas {
         gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
     }
 
-    public void renderHUD(GameTimer timer){
+    public void renderHUD(GameModeHandler modeHandler, GameTimer timer){
         GraphicsContext gc = getGraphicsContext2D();
-        if (mode != null) {
-            mode.renderHUD(gc, timer);
+        if (modeHandler != null) {
+            modeHandler.renderHUD(gc, timer);
         }
     }
     // Render board
@@ -176,9 +174,5 @@ public class GameRenderer extends Canvas {
 
             gc.fillRect(x, y, TILE, TILE);
         }
-    }
-
-    public void setMode(GameMode mode) {
-        this.mode = mode;
     }
 }

@@ -1,9 +1,9 @@
 package org.example.ascendrix;
 
 public class MovementConfig {
-    public int dasFrames;
-    public int arrFrames;
-    public int sdfFrames;
+    public long dasNs; // nanoseconds
+    public long arrNs;
+    public long sdfNs;
 
     public boolean instantArr;
     public boolean instantSdf;

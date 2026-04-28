@@ -1,29 +1,44 @@
 package org.example.ascendrix;
 
 public class SprintLockDelay implements LockDelay {
-    private final int lockFrames;
-    private long groundedSinceFrame = -1;
+    private final long lockNs;
 
-    public SprintLockDelay(int lockFrames) {
-        this.lockFrames = lockFrames;
+    private long lockStartTime = -1;
+    private long lastResetTime = -1;
+
+
+    public SprintLockDelay(long lockNs) {
+        this.lockNs = lockNs;
     }
 
     @Override
-    public void update(long frame, GameEngine game) {
-        if (game.isOnGround()) {
-            if (groundedSinceFrame == -1) groundedSinceFrame = frame;
+    public void update(long now, GameEngine game) {
 
-            if (frame - groundedSinceFrame >= lockFrames) {
-                groundedSinceFrame = -1;
+        if (game.isOnGround()) {
+
+            // Start counting whe block is on ground
+            if (lockStartTime == -1) {
+                lockStartTime = now;
+                lastResetTime = now;
+            }
+
+            // Lock delay check
+            if (now - lastResetTime >= lockNs) {
+                lockStartTime = -1;
+                lastResetTime = -1;
                 game.lock();
             }
+
         } else {
-            groundedSinceFrame = -1;
+            lockStartTime = -1;
+            lastResetTime = -1;
         }
     }
 
     @Override
-    public void onMoveOrRotate(long frame) {
-        groundedSinceFrame = frame; // reset the lock timer
+    public void onMoveOrRotate(long now) {
+        if (lockStartTime != -1) {
+            lastResetTime = now;
+        }
     }
 }
