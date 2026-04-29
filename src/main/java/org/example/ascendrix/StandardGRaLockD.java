@@ -1,11 +1,11 @@
 package org.example.ascendrix;
 // Gravity config for Sprint
-public class SprintGravity implements Gravity {
+public class StandardGRaLockD implements Gravity {
 
     private long lastFallTime = -1;
     private final long fallNs;
 
-    public SprintGravity(long fallNs) {
+    public StandardGRaLockD(long fallNs) {
         this.fallNs = fallNs;
     }
 

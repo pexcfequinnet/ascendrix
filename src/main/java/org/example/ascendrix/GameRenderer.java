@@ -45,7 +45,7 @@ public class GameRenderer extends Canvas {
     }
     public void renderBoardOverlay() {
         GraphicsContext gc = getGraphicsContext2D();
-        gc.setFill(Color.color(0.5, 0.5, 0.5, 0.8)); // grey with ~60% opacity
+        gc.setFill(Color.color(0.5, 0.5, 0.5, 0.8)); // grey with ~80% opacity
         gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
     }
 

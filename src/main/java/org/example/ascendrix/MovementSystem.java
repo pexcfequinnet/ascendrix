@@ -30,7 +30,7 @@ public class MovementSystem implements Handling {
         if (now - dasStartTime < config.dasNs) return;
 
         // ARR phase
-        if (config.instantArr) {
+        if (config.instantArr || config.arrNs == 0) {
             while (game.canMoveHorizontal(dir)) {
                 game.move(dir);
             }

@@ -8,7 +8,7 @@ public class ModeHandlerFactory {
             case MASTER -> new MasterModeHandler();
             case MARATHON -> new MarathonModeHandler();
              */
-            case MARATHON -> null;
+            case MARATHON -> new MarathonModeHandler(150);
             case MASTER -> null;
             case OVERDRIVE -> null;
         };
