@@ -1,8 +1,8 @@
 package org.example.ascendrix;
 
 public class SprintRuleset extends RulesetHandler {
-    private static final long GRAVITY_NS = 500_000_000; // 0.5s
-    private static final long LOCK_NS    = 500_000_000; // 0.5s
+    private static final long GRAVITY_NS = 1_500_000_000; // 1.5s
+    private static final long LOCK_NS    = 400_000_000; // 0.4s
     public SprintRuleset(Handling handling, RotationSystem rotationSystem) {
         super(
                 handling,

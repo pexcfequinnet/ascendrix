@@ -6,6 +6,11 @@ public class TetrominoHandler {
     public TetrominoType type;
     public int rotation;
     public int[][] blocks;
+    public boolean lastMoveWasRotation = false;
+    public boolean movedAfterRotation = false;
+    public int lastKickIndex = -1;
+    public int yAtRotation = -1;
+
     public TetrominoHandler(TetrominoType type, int x, int y) {
         this.type = type;
         this.x = x;

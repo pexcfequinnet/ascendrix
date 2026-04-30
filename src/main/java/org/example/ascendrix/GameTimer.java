@@ -42,6 +42,6 @@ public class GameTimer {
         long seconds = totalSeconds % 60;
         long centiseconds = (ms % 1000) / 10;
 
-        return String.format("%02d:%02d:%02d", minutes, seconds, centiseconds);
+        return String.format("%02d:%02d.%02d", minutes, seconds, centiseconds);
     }
 }

@@ -135,22 +135,4 @@ public class InputHandler {
     public boolean isSoftDropHeld() {
         return isRunning.getAsBoolean() && softDrop;
     }
-
-    // ===== OPTIONAL EDGE (nếu bạn vẫn cần) =====
-
-    public boolean isRotateCWJustPressed() {
-        return isRunning.getAsBoolean() && rotateCW && !prevRotateCW;
-    }
-
-    public boolean isRotateCCWJustPressed() {
-        return isRunning.getAsBoolean() && rotateCCW && !prevRotateCCW;
-    }
-
-    public boolean isHardDropJustPressed() {
-        return isRunning.getAsBoolean() && hardDrop && !prevHardDrop;
-    }
-
-    public boolean isHoldJustPressed() {
-        return isRunning.getAsBoolean() && hold && !prevHold;
-    }
 }

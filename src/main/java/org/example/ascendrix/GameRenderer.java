@@ -3,6 +3,7 @@ package org.example.ascendrix;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+
 import java.util.*;
 
 
@@ -12,11 +13,17 @@ public class GameRenderer extends Canvas {
     private final int COLS = 10;
     private final int ROWS = 20;
     private final int OFFSET_X = 100; // Move entire board to the right to make space for hold and other stats
+    private HUDHandler hud;
 
+    public void setHUD(HUDHandler hud) {
+        this.hud = hud;
+    }
     public GameRenderer() {
         setWidth(COLS * TILE  + 200);
         setHeight(ROWS * TILE);
     }
+
+
 
     public void renderBackground() {
         GraphicsContext gc = getGraphicsContext2D();
@@ -43,18 +50,23 @@ public class GameRenderer extends Canvas {
             g.fillText(text, 200, 300);
         }
     }
-    public void renderBoardOverlay() {
+    public void renderGameOver() {
         GraphicsContext gc = getGraphicsContext2D();
+
+        gc.setFill(Color.WHITE);
+        gc.fillText("GAME OVER", 300, 200);
         gc.setFill(Color.color(0.5, 0.5, 0.5, 0.8)); // grey with ~80% opacity
         gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
     }
-
-    public void renderHUD(GameModeHandler modeHandler, GameTimer timer){
+    public void renderGameComplete() {
         GraphicsContext gc = getGraphicsContext2D();
-        if (modeHandler != null) {
-            modeHandler.renderHUD(gc, timer);
-        }
+
+        gc.setFill(Color.WHITE);
+        gc.fillText("GAME CLEARED", 300, 200);
+        gc.setFill(Color.color(0, 0, 0, 0));
+        gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
     }
+
     // Render board
     public void renderBoard(TetrominoType[][] board) {
         GraphicsContext gc = getGraphicsContext2D();
@@ -174,5 +186,28 @@ public class GameRenderer extends Canvas {
 
             gc.fillRect(x, y, TILE, TILE);
         }
+    }
+
+    public void renderHUD(GameModeHandler modeHandler, GameTimer timer){
+        GraphicsContext gc = getGraphicsContext2D();
+        if (modeHandler != null) {
+            modeHandler.renderHUD(gc, timer);
+        }
+    }
+    public void renderSpin(long now) {
+        GraphicsContext gc = getGraphicsContext2D();
+        if (!hud.shouldDisplay(now)) return;
+
+        double alpha = hud.getAlpha(now);
+        gc.setGlobalAlpha(alpha);
+
+        gc.setFill(Color.color(0, 0, 0, 0.6));
+        gc.fillRect(250, 150, 220, 60);
+
+        gc.setFill(Color.ORANGE);
+        gc.fillText(hud.getSpinText(), 10, 200);
+
+
+        gc.setGlobalAlpha(1.0);
     }
 }

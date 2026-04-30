@@ -4,6 +4,8 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 public class MarathonModeHandler implements GameModeHandler {
+    private final PieceSpinHandler spinHandler = new SRSSpinDetector();
+    private final HUDHandler hud = new HUDHandler();
     private final int targetLines;
     private int linesCleared = 0;
     private int score = 0;
@@ -13,7 +15,18 @@ public class MarathonModeHandler implements GameModeHandler {
     }
 
     @Override
-    public void onLinesCleared(int lines, GameEngine game) {
+    public PieceSpinHandler getSpinHandler() {
+        return spinHandler;
+    }
+
+
+    @Override
+    public SpinType filterSpin(SpinType spin) {
+        return spin;
+    }
+
+    @Override
+    public void onLinesCleared(int lines, SpinType spin, GameEngine game) {
         linesCleared += lines;
 
         switch (lines) {
@@ -31,8 +44,9 @@ public class MarathonModeHandler implements GameModeHandler {
     }
 
     @Override
-    public HUDData getHUD() {
-        return new HUDData(linesCleared, targetLines, "", 0 );
+    public HUDHandler getHUD() {
+        hud.updateStats(linesCleared, targetLines, "", 0);
+        return hud;
     }
 
     @Override

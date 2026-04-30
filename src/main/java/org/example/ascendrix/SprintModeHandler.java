@@ -6,12 +6,25 @@ import javafx.scene.paint.Color;
 public class SprintModeHandler implements GameModeHandler {
     private final int targetLines;
     private int linesCleared = 0;
-
+    private final PieceSpinHandler spinHandler = new SRSSpinDetector();
     public SprintModeHandler(int targetLines) {
         this.targetLines = targetLines;
     }
+    private final HUDHandler hud = new HUDHandler();
     @Override
-    public void onLinesCleared(int lines, GameEngine game) {
+    public PieceSpinHandler getSpinHandler() {
+        return spinHandler;
+    }
+
+
+
+    @Override
+    public SpinType filterSpin(SpinType spin) {
+        return spin;
+    }
+
+    @Override
+    public void onLinesCleared(int lines, SpinType spin, GameEngine game) {
         linesCleared += lines;
         if (linesCleared >= targetLines) {
             game.end();
@@ -19,14 +32,15 @@ public class SprintModeHandler implements GameModeHandler {
     }
 
     @Override
-    public HUDData getHUD() {
-        return new HUDData(linesCleared, targetLines, "", 0 );
-    }
-    @Override
     public boolean isFinished() {
         return linesCleared >= targetLines;
     }
 
+    @Override
+    public HUDHandler getHUD() {
+        hud.updateStats(linesCleared, targetLines, "", 0);
+        return hud;
+    }
     @Override
     public void renderHUD(GraphicsContext g, GameTimer timer) {
         g.setFill(Color.WHITE);

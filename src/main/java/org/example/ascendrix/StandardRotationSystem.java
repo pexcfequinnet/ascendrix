@@ -11,7 +11,9 @@ public class StandardRotationSystem implements RotationSystem {
         int[][] kicks = getKicks(piece.type, from, to);
         int[][] newBlocks = rotatedShape(piece.blocks, piece.type, dir);
 
-        for (int[] k : kicks) {
+        for (int i = 0; i < kicks.length; i++) {
+            int[] k = kicks[i];
+
             int newX = piece.x + k[0];
             int newY = piece.y + k[1];
 
@@ -20,6 +22,11 @@ public class StandardRotationSystem implements RotationSystem {
                 piece.y = newY;
                 piece.rotation = to;
                 piece.blocks = newBlocks;
+
+                piece.lastMoveWasRotation = true;
+                piece.movedAfterRotation = false;
+                piece.lastKickIndex = i;
+
                 return;
             }
         }
@@ -59,7 +66,7 @@ public class StandardRotationSystem implements RotationSystem {
     }
 
     // Pivot:
-    private static double[] getPivot(TetrominoType type) {
+    public static double[] getPivot(TetrominoType type) {
         return switch (type) {
             case I -> new double[]{1.5, 1.5};
             case O -> new double[]{1.5, 0.5};

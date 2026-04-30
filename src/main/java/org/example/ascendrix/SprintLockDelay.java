@@ -26,7 +26,7 @@ public class SprintLockDelay implements LockDelay {
             if (now - lastResetTime >= lockNs) {
                 lockStartTime = -1;
                 lastResetTime = -1;
-                game.lock();
+                game.lockBlock();
             }
 
         } else {

@@ -1,6 +1,7 @@
 package org.example.ascendrix;
 
 public class MarathonRuleset extends RulesetHandler {
+
     private static final long GRAVITY_NS = 500_000_000L;
     private static final long LOCK_NS = 500_000_000L; // 0.5s
     public MarathonRuleset(Handling handling, RotationSystem rotationSystem) {
