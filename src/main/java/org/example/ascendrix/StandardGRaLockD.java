@@ -3,15 +3,19 @@ package org.example.ascendrix;
 public class StandardGRaLockD implements Gravity {
 
     private long lastFallTime = -1;
-    private final long fallNs;
+    private long fallNs;
 
     public StandardGRaLockD(long fallNs) {
         this.fallNs = fallNs;
     }
 
+    public void setFallNs(long fallNs) {
+        this.fallNs = fallNs;
+    }
+
     @Override
     public void update(long now, GameEngine game) {
-
+        System.out.println("Updating gravity instance: " + System.identityHashCode(this) + " fallNs: " + fallNs);
         if (lastFallTime == -1) {
             lastFallTime = now;
             return;

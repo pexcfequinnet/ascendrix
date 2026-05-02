@@ -4,10 +4,11 @@ import javafx.scene.canvas.GraphicsContext;
 
 public interface GameModeHandler {
     SpinType filterSpin(SpinType spin);
-    void onLinesCleared(int lines, SpinType spin, GameEngine game);
+    RulesetHandler getRuleset();
+    void onLinesCleared(int cleared, SpinType finalSpin, int pendingDropRows, DropType pendingDropType, GameEngine gameEngine);
     PieceSpinHandler getSpinHandler();
     boolean isFinished();
     //void onTick(GameEngine engine, long now);
     HUDHandler getHUD();
-    void renderHUD(GraphicsContext g,  GameTimer timer);
+    void renderHUD(GraphicsContext g,  GameTimer timer, long now);
 }

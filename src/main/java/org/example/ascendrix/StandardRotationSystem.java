@@ -5,6 +5,8 @@ public class StandardRotationSystem implements RotationSystem {
     public void tryRotate(TetrominoHandler piece, int dir, GameEngine game) {
         if (piece.type == TetrominoType.O) return;
 
+        piece.wasImmobileBeforeRotation = !game.canPlace(piece.blocks, piece.x - 1, piece.y)
+                && !game.canPlace(piece.blocks, piece.x + 1, piece.y);
         int from = piece.rotation;
         int to = (from + dir + 4) % 4;
 
@@ -26,7 +28,6 @@ public class StandardRotationSystem implements RotationSystem {
                 piece.lastMoveWasRotation = true;
                 piece.movedAfterRotation = false;
                 piece.lastKickIndex = i;
-
                 return;
             }
         }

@@ -188,10 +188,10 @@ public class GameRenderer extends Canvas {
         }
     }
 
-    public void renderHUD(GameModeHandler modeHandler, GameTimer timer){
+    public void renderHUD(GameModeHandler modeHandler, GameTimer timer, long now){
         GraphicsContext gc = getGraphicsContext2D();
         if (modeHandler != null) {
-            modeHandler.renderHUD(gc, timer);
+            modeHandler.renderHUD(gc, timer, 0L);
         }
     }
     public void renderSpin(long now) {
@@ -202,10 +202,10 @@ public class GameRenderer extends Canvas {
         gc.setGlobalAlpha(alpha);
 
         gc.setFill(Color.color(0, 0, 0, 0.6));
-        gc.fillRect(250, 150, 220, 60);
+        gc.fillRect(250, 150, 110, 60);
 
         gc.setFill(Color.ORANGE);
-        gc.fillText(hud.getSpinText(), 10, 200);
+        gc.fillText(hud.getClearText(), 10, 200);
 
 
         gc.setGlobalAlpha(1.0);

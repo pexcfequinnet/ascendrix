@@ -7,7 +7,7 @@ public class SprintRuleset extends RulesetHandler {
         super(
                 handling,
                 new StandardGRaLockD(GRAVITY_NS),
-                new SprintLockDelay(LOCK_NS),
+                new LockDelayConfig(LOCK_NS),
                 rotationSystem
         );
     }

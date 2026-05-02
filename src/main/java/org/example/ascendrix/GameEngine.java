@@ -34,6 +34,8 @@ public class GameEngine {
     private final RulesetHandler rulesetHandler;
     public Handling handling;
     public SRSSpinDetector spinDetector = new SRSSpinDetector();
+    public DropType pendingDropType;
+    public int pendingDropRows = 0;
 
     // Countdown timer
     public int countdown = 1;
@@ -50,9 +52,9 @@ public class GameEngine {
 
 
     public GameEngine(GameRenderer renderer, RulesetHandler rulesetHandler, GameModeHandler modeHandler) {
-        this.rulesetHandler = rulesetHandler;
-        this.handling = rulesetHandler.handling;
         this.mode_handler = modeHandler;
+        this.rulesetHandler = modeHandler.getRuleset();
+        this.handling = this.rulesetHandler.handling;
 
         queue = new TetrominoQueue();
         spawnBlock();
@@ -90,7 +92,7 @@ public class GameEngine {
         renderer.renderCurrentPiece(current);
         renderer.renderNext(queue.getPreview());
         renderer.renderHold(holdPiece);
-        renderer.renderHUD(mode_handler,timer);
+        renderer.renderHUD(mode_handler, timer, 0L);
         renderer.renderSpin(System.nanoTime());
         renderer.renderCountdown(phase, countdown);
 
@@ -120,12 +122,13 @@ public class GameEngine {
 //        if (delta > 100_000_000) {
 //            delta = 100_000_000;
 //        }
-        // Time-based render system
+
+
+        //tick++;
+
         rulesetHandler.handling.update(now, input, this);
         rulesetHandler.gravity.update(now, this);
         rulesetHandler.lockDelay.update(now, this);
-
-        //tick++;
     }
     /* ========================== GAME LOGIC  ========================== */
     // Vertical piece offset
@@ -211,6 +214,8 @@ public class GameEngine {
     public void softDrop(long now) {
         if (canMove(current.x, current.y + 1)) {
             current.y++;
+            pendingDropRows++;
+            pendingDropType = DropType.SOFT;
             if (current.y > current.yAtRotation)
                 current.movedAfterRotation = true;
             notifyMoveOrRotate(now);
@@ -218,16 +223,25 @@ public class GameEngine {
     }
 
     public void hardDrop(long now) {
+        int rows = 0;
         int y = current.y;
         while (canMove(current.x, y + 1)) {
             y++;
+            rows++;
         }
         current.y = y;
+
+        if (rows > 0) {
+            pendingDropRows += rows;
+            pendingDropType = DropType.HARD;
+        }
 
         if (current.y > current.yAtRotation)
             current.movedAfterRotation = true;
 
-        // Important: notify lock system
+
+
+            // Important: notify lock system
         notifyMoveOrRotate(now);
         lockBlock();
     }
@@ -246,11 +260,13 @@ public class GameEngine {
 
         int cleared = clearLines();
         totalLines += cleared;
-        if (cleared > 0) {
-            mode_handler.onLinesCleared(cleared, finalSpin, this);
-        }
+        mode_handler.onLinesCleared(cleared, finalSpin, pendingDropRows, pendingDropType, this);
 
-        hud.showSpin(finalSpin, cleared, System.nanoTime());
+        // Reset dropBonus for Marathon
+        pendingDropRows = 0;
+        pendingDropType = DropType.NONE;
+
+        hud.showClear(finalSpin, cleared, System.nanoTime());
         spawnBlock();
     }
 

@@ -23,11 +23,11 @@ public class SRSSpinDetector implements PieceSpinHandler {
                 if (corners < 3 && t.lastKickIndex == 0) yield SpinType.NONE;
                 yield classifyTSpin(t, tl, tr, bl, br, count(tl, tr, bl, br));
             }
-            case L -> isImmobile(t, game) ? SpinType.L_SPIN : SpinType.NONE;
-            case J -> isImmobile(t, game) ? SpinType.J_SPIN : SpinType.NONE;
-            case S -> isImmobile(t, game) ? SpinType.S_SPIN : SpinType.NONE;
-            case Z -> isImmobile(t, game) ? SpinType.Z_SPIN : SpinType.NONE;
-            case I -> isImmobile(t, game) ? SpinType.I_SPIN : SpinType.NONE;
+            case L -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_L_SPIN : SpinType.NONE;
+            case J -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_J_SPIN : SpinType.NONE;
+            case S -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_S_SPIN : SpinType.NONE;
+            case Z -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_Z_SPIN : SpinType.NONE;
+            case I -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_I_SPIN : SpinType.NONE;
             default -> SpinType.NONE;
         };
     }

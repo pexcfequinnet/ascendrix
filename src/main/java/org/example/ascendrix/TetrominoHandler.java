@@ -10,6 +10,7 @@ public class TetrominoHandler {
     public boolean movedAfterRotation = false;
     public int lastKickIndex = -1;
     public int yAtRotation = -1;
+    public boolean wasImmobileBeforeRotation = false;
 
     public TetrominoHandler(TetrominoType type, int x, int y) {
         this.type = type;

@@ -1,13 +1,13 @@
 package org.example.ascendrix;
 
-public class SprintLockDelay implements LockDelay {
+public class LockDelayConfig implements LockDelay {
     private final long lockNs;
 
     private long lockStartTime = -1;
     private long lastResetTime = -1;
 
 
-    public SprintLockDelay(long lockNs) {
+    public LockDelayConfig(long lockNs) {
         this.lockNs = lockNs;
     }
 
