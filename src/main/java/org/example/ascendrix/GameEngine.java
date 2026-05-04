@@ -51,7 +51,7 @@ public class GameEngine {
     }
 
 
-    public GameEngine(GameRenderer renderer, RulesetHandler rulesetHandler, GameModeHandler modeHandler) {
+    public GameEngine(GameRenderer renderer, GameModeHandler modeHandler) {
         this.mode_handler = modeHandler;
         this.rulesetHandler = modeHandler.getRuleset();
         this.handling = this.rulesetHandler.handling;
@@ -61,7 +61,6 @@ public class GameEngine {
 
         this.renderer = renderer;
     }
-
     public void start() {
         phase = GamePhase.COUNTDOWN; // ← initialize phase
         lastTick = System.currentTimeMillis();
@@ -81,7 +80,7 @@ public class GameEngine {
 
     // Rendering function: Initialize the game
     private void render() {
-        renderer.setHUD(hud);
+        long now = System.nanoTime();
         renderer.renderBoard(board);
         if (getPhase() == GamePhase.GAME_OVER)
             renderer.renderGameOver();
@@ -92,8 +91,7 @@ public class GameEngine {
         renderer.renderCurrentPiece(current);
         renderer.renderNext(queue.getPreview());
         renderer.renderHold(holdPiece);
-        renderer.renderHUD(mode_handler, timer, 0L);
-        renderer.renderSpin(System.nanoTime());
+        renderer.renderHUD(mode_handler, timer, now);
         renderer.renderCountdown(phase, countdown);
 
     }
@@ -152,6 +150,8 @@ public class GameEngine {
         }
 
         spawning = true;
+        piece.movedBeforeRotation = true;
+        piece.movedSinceLastRotation = true;
         current = piece;
         spawning = false;
     }
@@ -207,6 +207,7 @@ public class GameEngine {
 
             current.movedAfterRotation = true;
             current.lastMoveWasRotation = false;
+            current.movedSinceLastRotation = true;
             notifyMoveOrRotate(System.nanoTime());
         }
     }
@@ -247,9 +248,7 @@ public class GameEngine {
     }
 
     public void lockBlock() {
-        SpinType rawSpin = spinDetector.detect(current, this);
-        SpinType finalSpin = mode_handler.filterSpin(rawSpin);
-
+        SpinType spin = spinDetector.detect(current, this);
         for (int[] p : current.getBlocks()) {
             int x = current.x + p[0];
             int y = current.y + p[1];
@@ -259,14 +258,20 @@ public class GameEngine {
         }
 
         int cleared = clearLines();
+        if (mode_handler.supportsPerfectClear() && cleared > 0 && isPerfectClear()) {
+            System.out.println("how tf");
+            renderer.renderPerfectClear();
+        }
         totalLines += cleared;
-        mode_handler.onLinesCleared(cleared, finalSpin, pendingDropRows, pendingDropType, this);
-
+        if (mode_handler.supportsPerfectClear()) {
+            mode_handler.setPerfectClearFlag(cleared > 0 && isPerfectClear());
+        }
+        mode_handler.onLinesCleared(cleared, spin, pendingDropRows, pendingDropType, this); // was deleted
         // Reset dropBonus for Marathon
         pendingDropRows = 0;
         pendingDropType = DropType.NONE;
 
-        hud.showClear(finalSpin, cleared, System.nanoTime());
+
         spawnBlock();
     }
 
@@ -330,6 +335,13 @@ public class GameEngine {
             if (x < 0 || x >= COLS || y >= ROWS) return false;
             if (y >= 0 && board[y][x] != null) return false;
         }
+        return true;
+    }
+
+    public boolean isPerfectClear() {
+        for (int y = 0; y < ROWS; y++)
+            for (int x = 0; x < COLS; x++)
+                if (board[y][x] != null) return false;
         return true;
     }
     // Countdown + timer

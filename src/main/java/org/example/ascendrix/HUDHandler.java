@@ -10,7 +10,9 @@ public class HUDHandler{
     public String clearText = "";
     public long displayUntil = 0;
 
+
     public boolean shouldDisplay(long now) {
+
         return now <= displayUntil;
     }
 
@@ -30,27 +32,19 @@ public class HUDHandler{
     }
 
     public void showClear(SpinType spin, int lines, long now) {
-        if (lines == 0) return;
-
+        if (lines == 0 && spin == SpinType.NONE) return;
         clearText = buildText(spin, lines);
-        displayUntil = now + 800_000_000;
-    }
-
-    // Spin Indicator
-    public void showSpin(SpinType spin, int lines, long now) {
-        if (spin == SpinType.NONE) return;
-
-        clearText = buildText(spin, lines);
-        displayUntil = now + 800_000_000; // 0.8s
+        if (clearText.isEmpty()) return;
+        displayUntil = now + 1_000_000_000;
     }
 
     private String buildText(SpinType spin, int lines) {
         if (spin == SpinType.NONE) {
             return switch (lines) {
-                case 1 -> "SINGLE";
-                case 2 -> "DOUBLE";
-                case 3 -> "TRIPLE";
-                case 4 -> "QUAD";
+                case 1 -> "\nSINGLE";
+                case 2 -> "\nDOUBLE";
+                case 3 -> "\nTRIPLE";
+                case 4 -> "\nQUAD";
                 default -> "";
             };
         }
@@ -66,10 +60,10 @@ public class HUDHandler{
         };
 
         String lineText = switch (lines) {
-            case 1 -> " SINGLE";
-            case 2 -> " DOUBLE";
-            case 3 -> " TRIPLE";
-            case 4 -> " QUAD";
+            case 1 -> "\nSINGLE";
+            case 2 -> "\nDOUBLE";
+            case 3 -> "\nTRIPLE";
+            case 4 -> "\nQUAD";
             default -> "";
         };
 

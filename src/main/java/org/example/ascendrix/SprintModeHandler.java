@@ -2,12 +2,15 @@ package org.example.ascendrix;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TextAlignment;
 
 public class SprintModeHandler implements GameModeHandler {
     private final SprintRuleset ruleset;
     private final int targetLines;
     private int linesCleared = 0;
-    private final PieceSpinHandler spinHandler = new SRSSpinDetector();
+    private boolean b2bActive = false;
+    private int b2bStreak = 0;
+    private boolean perfectClear = false;
 
     public SprintModeHandler(int targetLines) {
         this.ruleset = SprintRuleset.create();
@@ -16,44 +19,69 @@ public class SprintModeHandler implements GameModeHandler {
     private final HUDHandler hud = new HUDHandler();
 
     @Override
+    public void setPerfectClearFlag(boolean flag){
+        this.perfectClear = flag;
+    }
+    @Override
+    public boolean supportsPerfectClear() {return true;}
+
+    @Override
     public RulesetHandler getRuleset() { return ruleset; }
 
-    @Override
-    public PieceSpinHandler getSpinHandler() {
-        return spinHandler;
-    }
-
 
     @Override
-    public SpinType filterSpin(SpinType spin) {
-        return spin;
-    }
-
-    @Override
-    public void onLinesCleared(int lines, SpinType finalSpin, int pendingDropRows, DropType pendingDropType, GameEngine game){
+    public void onLinesCleared(int lines, SpinType spin, int pendingDropRows, DropType pendingDropType, GameEngine game){
         linesCleared += lines;
+        boolean isB2B = lines == 4 || spin != SpinType.NONE;
+
+        if (isB2B && b2bActive) {
+            b2bStreak++;
+        } else {
+            b2bStreak = 0;
+        }
+
+        b2bActive = isB2B; // update after the check
+
         if (linesCleared >= targetLines) {
             game.end();
         }
+        hud.showClear(spin, lines, System.nanoTime());
     }
 
-    @Override
-    public boolean isFinished() {
-        return linesCleared >= targetLines;
-    }
-
-    @Override
-    public HUDHandler getHUD() {
-        hud.updateStats(linesCleared, targetLines, "", 0);
-        return hud;
-    }
     @Override
     public void renderHUD(GraphicsContext g, GameTimer timer, long now) {
+        // Render spin
+        if (hud.shouldDisplay(now)) {
+            double alpha = hud.getAlpha(now);
+            g.setGlobalAlpha(alpha);
+
+            g.setFill(Color.color(0, 0, 0, 0.6));
+            g.fillRect(160, 150, 70, 60);
+
+            g.setFill(Color.ORANGE);
+            g.fillText(hud.getClearText(), 160, 200);
+
+            g.setGlobalAlpha(1.0);
+        }
+
+        if(b2bActive && b2bStreak > 0)
+        {
+            g.setFill(Color.YELLOW);
+            g.fillText("B2B x" + b2bStreak, 200, 240);
+        }
+
         g.setFill(Color.WHITE);
-        g.fillText("SPRINT", 20, 400);
+        g.setTextAlign(TextAlignment.RIGHT);
+        g.fillText("SPRINT", 240, 400);
 
         long time = timer.getElapsedMs();
-        g.fillText("Time: " + GameTimer.formatTime(time), 20, 420);
-        g.fillText("Lines: " + linesCleared + "/" + targetLines, 20, 440);
+        g.fillText("Time: " + GameTimer.formatTime(time), 240, 420);
+        g.fillText("Lines: " + linesCleared + "/" + targetLines, 240, 440);
+        g.setTextAlign(TextAlignment.LEFT);
+
+
+
+
+
     }
 }

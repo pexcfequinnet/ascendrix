@@ -1,9 +1,8 @@
 package org.example.ascendrix;
 
 public class MarathonRuleset extends RulesetHandler {
-
+    private final MovementConfig config;
     private static final double[] GRAVITY_SECONDS = computeGravityTable();
-
     private static double[] computeGravityTable() {
         double[] table = new double[20 + 1];
         for (int level = 1; level <= 20; level++) {
@@ -18,28 +17,41 @@ public class MarathonRuleset extends RulesetHandler {
     }
 
     public void onLevelChanged(int level) {
-        long ns = gravityNsForLevel(level);
-        ((StandardGRaLockD) gravity).setFallNs(ns);
+        long gravityNs = gravityNsForLevel(level);
+        ((GravityHandler) gravity).setFallNs(gravityNs);
+        config.sdfNs = gravityNs / 20;
+        if (level >= 5) {
+            config.dasNs = 122_000_000L; // faster DAS at lv5+
+            config.arrNs = 25_000_000L;  // faster ARR at lv5+
+        }
+        if (level >= 12){
+            config.dasNs = 110_000_000L; // faster DAS at lv5+
+            config.arrNs = 16_000_000L;  // faster ARR at lv5+
+        }
     }
-    public MarathonRuleset(Handling handling, RotationSystem rotationSystem) {
+
+    public MarathonRuleset(Handling handling, RotationSystem rotationSystem, MovementConfig config) {
+        this.config = config;
         super(
                 handling,
-                new StandardGRaLockD(gravityNsForLevel(1)),
-                new LockDelayConfig(1_000_000_000L),
+                new GravityHandler(gravityNsForLevel(1)),
+                new LockDelayHandler(600_000_000L, 15),
                 rotationSystem
         );
+        ((LockDelayHandler) lockDelay).setLockResetLimit(15);
+        config.sdfNs = gravityNsForLevel(1) / 20; // set initial SDF at level 1
     }
-    public static MovementConfig marathonConfig(){
-        MovementConfig c = new MovementConfig();
-        c.dasNs = 135_000_000L;
-        c.arrNs = 20_000_000L;
-        c.sdfNs = 25_000_000L;
-        return c;
-    }
+
     public static MarathonRuleset create() {
+        MovementConfig config = new MovementConfig();
+        config.dasNs = 135_000_000L;
+        config.arrNs = 33_000_000L;
+        // sdfNs set dynamically in constructor
+
         return new MarathonRuleset(
-                new MovementSystem(marathonConfig()),
-                new StandardRotationSystem()
+                new MovementSystem(config),
+                new StandardRotationSystem(),
+                config
         );
     }
 }

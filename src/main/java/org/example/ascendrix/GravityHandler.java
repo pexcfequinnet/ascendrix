@@ -1,11 +1,11 @@
 package org.example.ascendrix;
 // Gravity config for Sprint
-public class StandardGRaLockD implements Gravity {
+public class GravityHandler implements Gravity {
 
     private long lastFallTime = -1;
     private long fallNs;
 
-    public StandardGRaLockD(long fallNs) {
+    public GravityHandler(long fallNs) {
         this.fallNs = fallNs;
     }
 
@@ -15,7 +15,6 @@ public class StandardGRaLockD implements Gravity {
 
     @Override
     public void update(long now, GameEngine game) {
-        System.out.println("Updating gravity instance: " + System.identityHashCode(this) + " fallNs: " + fallNs);
         if (lastFallTime == -1) {
             lastFallTime = now;
             return;

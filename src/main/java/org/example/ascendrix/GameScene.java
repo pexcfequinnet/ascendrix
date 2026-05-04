@@ -14,13 +14,13 @@ public class GameScene {
         RulesetHandler ruleset = RulesetFactory.create(mode);
         GameModeHandler modeHandler = ModeHandlerFactory.create(mode);
 
-        GameEngine engine = new GameEngine(renderer, ruleset, modeHandler);
+        GameEngine engine = new GameEngine(renderer, modeHandler);
 
         InputHandler input = new InputHandler(engine, engine::isRunning);
         engine.setInput(input);
 
         StackPane root = new StackPane(renderer);
-        scene = new Scene(root, 500, 600);
+        scene = new Scene(root, 800, 600);
 
         input.attach(scene);
 

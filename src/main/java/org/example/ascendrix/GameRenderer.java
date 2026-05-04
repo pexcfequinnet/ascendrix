@@ -1,8 +1,10 @@
 package org.example.ascendrix;
 
+import javafx.geometry.VPos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.text.*;
 
 import java.util.*;
 
@@ -12,26 +14,15 @@ public class GameRenderer extends Canvas {
     private final int TILE = 30;
     private final int COLS = 10;
     private final int ROWS = 20;
-    private final int OFFSET_X = 100; // Move entire board to the right to make space for hold and other stats
-    private HUDHandler hud;
+    private final int OFFSET_X = 250; // Move entire board to the right to make space for HUD
+    private final int RIGHT_PANEL = 250;
 
-    public void setHUD(HUDHandler hud) {
-        this.hud = hud;
-    }
     public GameRenderer() {
-        setWidth(COLS * TILE  + 200);
+        setWidth(OFFSET_X + COLS * TILE + RIGHT_PANEL);  // 250 + 300 + 250 = 800
         setHeight(ROWS * TILE);
     }
 
 
-
-    public void renderBackground() {
-        GraphicsContext gc = getGraphicsContext2D();
-        // Background
-        gc.setFill(Color.BLACK);
-        gc.fillRect(0, 0, getWidth(), getHeight());
-
-    }
     public void renderCountdown(GamePhase phase, int countdown){
         GraphicsContext g = getGraphicsContext2D();
 
@@ -119,10 +110,12 @@ public class GameRenderer extends Canvas {
     // Render next pieces
     public void renderNext(List<TetrominoType> preview) {
         GraphicsContext gc = getGraphicsContext2D();
-        // Right pane
+
+        // Fill the full right panel instead of just 100px
         gc.setFill(Color.BLACK);
-        gc.fillRect(OFFSET_X + COLS * TILE, 0, 100, getHeight());
-        int baseX = OFFSET_X + 320;
+        gc.fillRect(OFFSET_X + COLS * TILE, 0, RIGHT_PANEL, getHeight());
+
+        int baseX = OFFSET_X + COLS * TILE + 20; // 20px padding from board edge
         int baseY = 50;
         int TILE = 20;
 
@@ -154,15 +147,13 @@ public class GameRenderer extends Canvas {
     public void renderHold(TetrominoType hold) {
         GraphicsContext gc = getGraphicsContext2D();
 
-        //  Hold section bg
         gc.setFill(Color.BLACK);
         gc.fillRect(0, 0, OFFSET_X, getHeight());
 
-        int baseX = 20;
-        int baseY = 50;
         int TILE = 20;
+        int baseX = OFFSET_X - 80;  // sits just to the left of the board
+        int baseY = 50;
 
-        // Text
         gc.setFill(Color.WHITE);
         gc.fillText("HOLD", baseX, baseY - 10);
 
@@ -191,23 +182,17 @@ public class GameRenderer extends Canvas {
     public void renderHUD(GameModeHandler modeHandler, GameTimer timer, long now){
         GraphicsContext gc = getGraphicsContext2D();
         if (modeHandler != null) {
-            modeHandler.renderHUD(gc, timer, 0L);
+            modeHandler.renderHUD(gc, timer, now);
         }
     }
-    public void renderSpin(long now) {
+    public void renderPerfectClear() {
         GraphicsContext gc = getGraphicsContext2D();
-        if (!hud.shouldDisplay(now)) return;
-
-        double alpha = hud.getAlpha(now);
-        gc.setGlobalAlpha(alpha);
-
-        gc.setFill(Color.color(0, 0, 0, 0.6));
-        gc.fillRect(250, 150, 110, 60);
-
-        gc.setFill(Color.ORANGE);
-        gc.fillText(hud.getClearText(), 10, 200);
-
-
-        gc.setGlobalAlpha(1.0);
+        gc.save();
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 36));
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setTextBaseline(VPos.CENTER);
+        gc.fillText("ALL CLEAR", 500, 125);
+        gc.restore();
     }
 }

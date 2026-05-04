@@ -7,11 +7,12 @@ public class TetrominoHandler {
     public int rotation;
     public int[][] blocks;
     public boolean lastMoveWasRotation = false;
+    public boolean kickWasHorizontal = false;
     public boolean movedAfterRotation = false;
+    public boolean movedBeforeRotation;
     public int lastKickIndex = -1;
     public int yAtRotation = -1;
-    public boolean wasImmobileBeforeRotation = false;
-
+    public boolean movedSinceLastRotation = true;
     public TetrominoHandler(TetrominoType type, int x, int y) {
         this.type = type;
         this.x = x;

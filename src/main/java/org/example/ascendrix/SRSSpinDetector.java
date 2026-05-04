@@ -3,6 +3,10 @@ package org.example.ascendrix;
 
 public class SRSSpinDetector implements PieceSpinHandler {
 
+    private boolean isValidSpin(TetrominoHandler t, GameEngine game) {
+        return isImmobile(t, game)
+                && (t.movedBeforeRotation || t.kickWasHorizontal);
+    }
     @Override
     public SpinType detect(TetrominoHandler t, GameEngine game) {
         if (!t.lastMoveWasRotation || t.movedAfterRotation)
@@ -20,14 +24,21 @@ public class SRSSpinDetector implements PieceSpinHandler {
         return switch (t.type) {
             case T -> {
                 int corners = count(tl, tr, bl, br);
-                if (corners < 3 && t.lastKickIndex == 0) yield SpinType.NONE;
-                yield classifyTSpin(t, tl, tr, bl, br, count(tl, tr, bl, br));
+                boolean immobile = !game.canPlace(t.blocks, t.x - 1, t.y) && !game.canPlace(t.blocks, t.x + 1, t.y);
+                System.out.println("T: corners=" + corners + " kickIndex=" + t.lastKickIndex + " immobile=" + immobile + " movedBefore=" + t.movedBeforeRotation + " tl="+tl+" tr="+tr+" bl="+bl+" br="+br+" rotation="+t.rotation);
+                if (!immobile) yield SpinType.NONE;
+                if (corners < 3 && t.lastKickIndex == 0 && !t.movedBeforeRotation) {
+                    System.out.println("filtered out");
+                    yield SpinType.NONE;
+                }
+                System.out.println("reaching classifyTSpin");
+                yield classifyTSpin(t, tl, tr, bl, br, corners);
             }
-            case L -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_L_SPIN : SpinType.NONE;
-            case J -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_J_SPIN : SpinType.NONE;
-            case S -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_S_SPIN : SpinType.NONE;
-            case Z -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_Z_SPIN : SpinType.NONE;
-            case I -> isImmobile(t, game) && t.lastKickIndex > 0 && !t.wasImmobileBeforeRotation ? SpinType.MINI_I_SPIN : SpinType.NONE;
+            case L -> isValidSpin(t, game) ? SpinType.MINI_L_SPIN : SpinType.NONE;
+            case J -> isValidSpin(t, game) ? SpinType.MINI_J_SPIN : SpinType.NONE;
+            case S -> isValidSpin(t, game) ? SpinType.MINI_S_SPIN : SpinType.NONE;
+            case Z -> isValidSpin(t, game) ? SpinType.MINI_Z_SPIN : SpinType.NONE;
+            case I -> isValidSpin(t, game) ? SpinType.MINI_I_SPIN : SpinType.NONE;
             default -> SpinType.NONE;
         };
     }
@@ -56,10 +67,12 @@ public class SRSSpinDetector implements PieceSpinHandler {
         };
 
         int f = count(front);
-        if (t.lastKickIndex >= 1 && corners < 3) return SpinType.MINI_T_SPIN;
-        if (t.lastKickIndex >= 3) return SpinType.T_SPIN;
-        if (f == 2)               return SpinType.T_SPIN;  // standard: facing 2 filled corners
-        if (f == 1)               return SpinType.MINI_T_SPIN;
+
+        if (t.lastKickIndex == 4)                          return SpinType.T_SPIN;
+        if (f == 2 && corners >= 3)                        return SpinType.T_SPIN;
+        if (f == 2)                         return SpinType.NONE;  // flat placement
+        if (f == 1)                                        return SpinType.MINI_T_SPIN;
+        if (corners >= 1 && t.movedBeforeRotation)         return SpinType.MINI_T_SPIN;
         return SpinType.NONE;
     }
     private static int count(boolean... flags) {
