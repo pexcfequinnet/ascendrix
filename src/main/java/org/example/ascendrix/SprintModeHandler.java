@@ -10,18 +10,16 @@ public class SprintModeHandler implements GameModeHandler {
     private int linesCleared = 0;
     private boolean b2bActive = false;
     private int b2bStreak = 0;
-    private boolean perfectClear = false;
 
     public SprintModeHandler(int targetLines) {
         this.ruleset = SprintRuleset.create();
         this.targetLines = targetLines;
     }
-    private final HUDHandler hud = new HUDHandler();
+    private final HUDHelper hud = new HUDHelper();
 
     @Override
-    public void setPerfectClearFlag(boolean flag){
-        this.perfectClear = flag;
-    }
+    public void setPerfectClearFlag(boolean flag){}
+
     @Override
     public boolean supportsPerfectClear() {return true;}
 

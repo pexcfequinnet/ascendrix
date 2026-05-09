@@ -25,13 +25,9 @@ public class SRSSpinDetector implements PieceSpinHandler {
             case T -> {
                 int corners = count(tl, tr, bl, br);
                 boolean immobile = !game.canPlace(t.blocks, t.x - 1, t.y) && !game.canPlace(t.blocks, t.x + 1, t.y);
-                System.out.println("T: corners=" + corners + " kickIndex=" + t.lastKickIndex + " immobile=" + immobile + " movedBefore=" + t.movedBeforeRotation + " tl="+tl+" tr="+tr+" bl="+bl+" br="+br+" rotation="+t.rotation);
                 if (!immobile) yield SpinType.NONE;
-                if (corners < 3 && t.lastKickIndex == 0 && !t.movedBeforeRotation) {
-                    System.out.println("filtered out");
-                    yield SpinType.NONE;
-                }
-                System.out.println("reaching classifyTSpin");
+                if (t.fellBetweenRotations) yield SpinType.NONE;
+                if (corners < 3 && t.lastKickIndex == 0 && !t.movedBeforeRotation) yield SpinType.NONE;
                 yield classifyTSpin(t, tl, tr, bl, br, corners);
             }
             case L -> isValidSpin(t, game) ? SpinType.MINI_L_SPIN : SpinType.NONE;
@@ -70,7 +66,7 @@ public class SRSSpinDetector implements PieceSpinHandler {
 
         if (t.lastKickIndex == 4)                          return SpinType.T_SPIN;
         if (f == 2 && corners >= 3)                        return SpinType.T_SPIN;
-        if (f == 2)                         return SpinType.NONE;  // flat placement
+        if (f == 2)                                        return SpinType.NONE;
         if (f == 1)                                        return SpinType.MINI_T_SPIN;
         if (corners >= 1 && t.movedBeforeRotation)         return SpinType.MINI_T_SPIN;
         return SpinType.NONE;

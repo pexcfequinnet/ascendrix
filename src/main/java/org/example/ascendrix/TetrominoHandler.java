@@ -7,9 +7,11 @@ public class TetrominoHandler {
     public int rotation;
     public int[][] blocks;
     public boolean lastMoveWasRotation = false;
+    public boolean fellBetweenRotations;
     public boolean kickWasHorizontal = false;
     public boolean movedAfterRotation = false;
     public boolean movedBeforeRotation;
+    public boolean droppedByPlayer = false;
     public int lastKickIndex = -1;
     public int yAtRotation = -1;
     public boolean movedSinceLastRotation = true;
@@ -27,6 +29,21 @@ public class TetrominoHandler {
             copy[i][1] = arr[i][1];
         }
         return copy;
+    }
+
+    public void applyRotation(int newX, int newY, int newRotation, int[][] newBlocks, int kickIndex, boolean kickHorizontal) {
+        x = newX;
+        y = newY;
+        rotation = newRotation;
+        blocks = newBlocks;
+        lastKickIndex = kickIndex;
+        kickWasHorizontal = kickHorizontal;
+        fellBetweenRotations = droppedByPlayer;
+        movedBeforeRotation = movedSinceLastRotation;
+        lastMoveWasRotation = true;
+        movedAfterRotation = false;
+        movedSinceLastRotation = false;
+        droppedByPlayer = false;
     }
 
     public int[][] getBlocks() {

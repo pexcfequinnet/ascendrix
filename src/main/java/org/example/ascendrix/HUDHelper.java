@@ -1,6 +1,6 @@
 package org.example.ascendrix;
 
-public class HUDHandler{
+public class HUDHelper {
 
     public int level;
     public int nextLevel;
@@ -12,7 +12,6 @@ public class HUDHandler{
 
 
     public boolean shouldDisplay(long now) {
-
         return now <= displayUntil;
     }
 

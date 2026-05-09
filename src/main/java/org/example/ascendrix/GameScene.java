@@ -9,10 +9,9 @@ public class GameScene {
 
     private final Scene scene;
 
-    public GameScene(SceneManager manager, GameMode mode) {
+    public GameScene(SceneManager manager, GameMode mode, GameTimer timer) {
         GameRenderer renderer = new GameRenderer();
-        RulesetHandler ruleset = RulesetFactory.create(mode);
-        GameModeHandler modeHandler = ModeHandlerFactory.create(mode);
+        GameModeHandler modeHandler = ModeHandlerFactory.create(mode, timer);
 
         GameEngine engine = new GameEngine(renderer, modeHandler);
 

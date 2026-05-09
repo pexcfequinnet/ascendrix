@@ -18,16 +18,7 @@ public class StandardRotationSystem implements RotationSystem {
             int newY = piece.y + k[1];
 
             if (game.canPlace(newBlocks, newX, newY)) {
-                piece.x = newX;
-                piece.y = newY;
-                piece.rotation = to;
-                piece.blocks = newBlocks;
-                piece.kickWasHorizontal = k[0] != 0;
-                piece.movedBeforeRotation = piece.movedSinceLastRotation;
-                piece.lastMoveWasRotation = true;
-                piece.movedAfterRotation = false;
-                piece.movedSinceLastRotation = false;
-                piece.lastKickIndex = i;
+                piece.applyRotation(newX, newY, to, newBlocks, i, k[0] != 0);
                 return;
             }
         }

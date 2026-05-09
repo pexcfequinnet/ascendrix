@@ -13,13 +13,15 @@ public class GameRenderer extends Canvas {
 
     private final int TILE = 30;
     private final int COLS = 10;
-    private final int ROWS = 20;
+    private final int ROWS = 25;
+    public final int VISIBLE_ROWS = 20;
+    private final int HIDDEN_ROWS = ROWS - VISIBLE_ROWS;;
     private final int OFFSET_X = 250; // Move entire board to the right to make space for HUD
     private final int RIGHT_PANEL = 250;
 
     public GameRenderer() {
         setWidth(OFFSET_X + COLS * TILE + RIGHT_PANEL);  // 250 + 300 + 250 = 800
-        setHeight(ROWS * TILE);
+        setHeight(VISIBLE_ROWS * TILE);
     }
 
 
@@ -47,7 +49,7 @@ public class GameRenderer extends Canvas {
         gc.setFill(Color.WHITE);
         gc.fillText("GAME OVER", 300, 200);
         gc.setFill(Color.color(0.5, 0.5, 0.5, 0.8)); // grey with ~80% opacity
-        gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
+        gc.fillRect(OFFSET_X, 0, COLS * TILE, VISIBLE_ROWS * TILE);
     }
     public void renderGameComplete() {
         GraphicsContext gc = getGraphicsContext2D();
@@ -55,56 +57,58 @@ public class GameRenderer extends Canvas {
         gc.setFill(Color.WHITE);
         gc.fillText("GAME CLEARED", 300, 200);
         gc.setFill(Color.color(0, 0, 0, 0));
-        gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
+        gc.fillRect(OFFSET_X, 0, COLS * TILE, VISIBLE_ROWS * TILE);
     }
 
     // Render board
     public void renderBoard(TetrominoType[][] board) {
+        int hiddenRows = board.length - VISIBLE_ROWS; // 5 hidden rows at top
+
         GraphicsContext gc = getGraphicsContext2D();
         gc.setFill(Color.BLACK);
-        gc.fillRect(OFFSET_X, 0, COLS * TILE, ROWS * TILE);
+        gc.fillRect(OFFSET_X, 0, COLS * TILE, VISIBLE_ROWS * TILE);
 
-
-        for (int y = 0; y < ROWS; y++) {
+        for (int y = hiddenRows; y < board.length; y++) {
             for (int x = 0; x < COLS; x++) {
+                int screenY = y - hiddenRows; // maps row 5 → pixel row 0
+
                 if (board[y][x] != null) {
                     gc.setFill(board[y][x].color);
-                    gc.fillRect(OFFSET_X + x * TILE, y * TILE, TILE, TILE);
+                    gc.fillRect(OFFSET_X + x * TILE, screenY * TILE, TILE, TILE);
                 }
-
                 gc.setStroke(Color.DARKGRAY);
-                gc.strokeRect(OFFSET_X + x * TILE, y * TILE, TILE, TILE);
+                gc.strokeRect(OFFSET_X + x * TILE, screenY * TILE, TILE, TILE);
             }
         }
     }
     // Render current piece
-    public void renderCurrentPiece(TetrominoHandler current){
+    public void renderCurrentPiece(TetrominoHandler current) {
         GraphicsContext gc = getGraphicsContext2D();
         if (current != null) {
             gc.setFill(current.type.color);
             for (int[] p : current.getBlocks()) {
+                int screenY = current.y + p[1] - HIDDEN_ROWS; // apply offset
+                if (screenY < 0) continue; // clip pieces still in vanish zone
                 int x = OFFSET_X + (current.x + p[0]) * TILE;
-                int y = (current.y + p[1]) * TILE;
+                int y = screenY * TILE;
                 gc.fillRect(x, y, TILE, TILE);
             }
         }
     }
+
+    // Render ghost piece
     public void renderGhostPiece(TetrominoHandler current, int ghostY) {
         if (current == null) return;
-
         GraphicsContext gc = getGraphicsContext2D();
-
         gc.setGlobalAlpha(0.3);
-
         gc.setFill(current.type.color);
-
         for (int[] p : current.getBlocks()) {
+            int screenY = ghostY + p[1] - HIDDEN_ROWS; // apply offset
+            if (screenY < 0) continue;
             int x = OFFSET_X + (current.x + p[0]) * TILE;
-            int y = (ghostY + p[1]) * TILE;
-
+            int y = screenY * TILE;
             gc.fillRect(x, y, TILE, TILE);
         }
-
         gc.setGlobalAlpha(1.0);
     }
     // Render next pieces

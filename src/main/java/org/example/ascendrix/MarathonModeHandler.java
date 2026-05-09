@@ -6,19 +6,16 @@ import javafx.scene.text.TextAlignment;
 
 public class MarathonModeHandler implements GameModeHandler {
     private final MarathonRuleset ruleset;
-    private final PieceSpinHandler spinHandler = new SRSSpinDetector();
-    private final HUDHandler hud = new HUDHandler();
+    private final HUDHelper hud = new HUDHelper();
     private final int targetLines;
     private int linesCleared = 0;
-    private long score = 0;  // was int — switch to long
+    private long score = 0;
     private int combo = 0;
     private boolean b2bActive = false;
     private int level = 1;
-    private static final double LOG_COMBO_CAP = Math.log(1000);
-    private static final double LOG_40        = Math.log(40);
     private static final int[]    B2B_THRESHOLDS = { 7, 14, 22, 36, 54 };
     private static final double[] B2B_TIERS = {1.2, 1.4, 1.6, 1.8, 2.0};
-    private static final double[] MINI_B2B_TIERS = {1.15, 1.2, 1.4, 1.6, 1.8};
+    private static final double[] MINI_B2B_TIERS = {1.1, 1.2, 1.4, 1.6, 1.8};
     private int b2bStreak = 0;  // counts consecutive B2B actions
     private boolean perfectClear = false;
 
@@ -54,15 +51,23 @@ public class MarathonModeHandler implements GameModeHandler {
     public void onLinesCleared(int lines, SpinType spin, int dropRows, DropType dropType, GameEngine game) {
         // drop bonus always applies regardless of line clear
         int pc_bonus = 0;
-        if(perfectClear)
-            pc_bonus = 450;
-
+        if (perfectClear)
+            pc_bonus = 900;
+        int spinBonus;
         score += dropBonus(dropRows, dropType);
 
         if (lines == 0) {
+            // Render spin bonus with no line clear
             hud.showClear(spin, lines, System.nanoTime());
             combo = 0;
             return;
+        }
+
+
+        switch(spin){
+            case T_SPIN -> spinBonus = 230;
+            case NONE -> spinBonus = 0;
+            default -> spinBonus = 115;
         }
 
         hud.showClear(spin, lines, System.nanoTime());
@@ -89,11 +94,12 @@ public class MarathonModeHandler implements GameModeHandler {
             case NONE -> 1.0;
             default -> MINI_B2B_TIERS[tier];
         };
+        // Score formula
         double lineMultiplier = Math.pow((lines + pc_bonus) / 2.0, 1.25);
         double comboMultiplier = Math.log(combo + 1) / Math.log(10000) + 1.0;
-        double levelMultiplier = Math.log(level) / LOG_40 + 1.0;
+        double levelMultiplier = Math.log(level) / Math.log(40) + 1.0;
 
-        score += Math.round(500.0 + lineMultiplier * spinMultiplier * b2bMultiplier * comboMultiplier * levelMultiplier);
+        score += Math.round(1500.0 + (lineMultiplier + spinBonus) * spinMultiplier * b2bMultiplier * comboMultiplier * levelMultiplier);
         combo = Math.min(combo + 1, 25);
 
         if (linesCleared >= targetLines) {

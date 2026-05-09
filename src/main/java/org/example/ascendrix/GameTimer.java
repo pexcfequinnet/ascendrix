@@ -24,13 +24,15 @@ public class GameTimer {
         accumulated = 0;
         running = false;
     }
-
+    // For marathon + sprint
     public long getElapsedMs() {
         if (running) {
             return accumulated + (System.currentTimeMillis() - startTime);
         }
         return accumulated;
     }
+    // For master + overdrive mode
+    public double getElapsedSeconds() {return getElapsedMs() / 1000.0;}
 
     public boolean isRunning() {
         return running;

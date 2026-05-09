@@ -7,7 +7,7 @@ public class GameEngine {
     public InputHandler input;
     // Board handling
     public final int COLS = 10;
-    public final int ROWS = 20;
+    public final int ROWS = 25;
     private static final int SPAWN_X = 3;
     public final TetrominoType [][] board = new TetrominoType[ROWS][COLS];
     // Tetromino + Bag queue handling
@@ -21,7 +21,7 @@ public class GameEngine {
     // Render
     private final GameRenderer renderer;
     private long lastUpdate = -1;
-    private final HUDHandler hud = new HUDHandler(); // for HUD stats, such as time or level
+    private final HUDHelper hud = new HUDHelper(); // for HUD stats, such as time or level
     //private long tick = 0;
 
     // Game state handling
@@ -132,8 +132,8 @@ public class GameEngine {
     // Vertical piece offset
     private int getSpawnYOffset(TetrominoType type) {
         if(type == TetrominoType.I)
-            return -1;
-        return 0;
+            return 4;
+        return 5;
     }
     public boolean isSpawning() {
         return spawning;
@@ -215,6 +215,7 @@ public class GameEngine {
     public void softDrop(long now) {
         if (canMove(current.x, current.y + 1)) {
             current.y++;
+            current.droppedByPlayer = true;
             pendingDropRows++;
             pendingDropType = DropType.SOFT;
             if (current.y > current.yAtRotation)
@@ -230,6 +231,7 @@ public class GameEngine {
             y++;
             rows++;
         }
+        if (rows > 0) current.droppedByPlayer = true;
         current.y = y;
 
         if (rows > 0) {
@@ -237,8 +239,9 @@ public class GameEngine {
             pendingDropType = DropType.HARD;
         }
 
-        if (current.y > current.yAtRotation)
+        if (current.y > current.yAtRotation){
             current.movedAfterRotation = true;
+        }
 
 
 
@@ -353,7 +356,7 @@ public class GameEngine {
             lastTick = now;
 
             if (countdown < 0) {
-                phase = GamePhase.PLAYING; // ← this is what unblocks update()
+                phase = GamePhase.PLAYING;
                 timer.reset();
                 timer.start();
             }
