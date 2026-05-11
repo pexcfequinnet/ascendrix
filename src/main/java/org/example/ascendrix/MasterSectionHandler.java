@@ -2,6 +2,10 @@ package org.example.ascendrix;
 
 public class MasterSectionHandler {
 
+    public int missedCools() {
+        return 1;
+    }
+
     public record SectionData(int start, int end, double timeLimit, int minQuads) {}
 
     private static final SectionData[] SECTIONS = {

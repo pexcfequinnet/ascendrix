@@ -8,7 +8,7 @@ public class MenuScene {
 
     private final Scene scene;
 
-    public MenuScene(SceneManager manager, GameTimer timer) {
+    public MenuScene(SceneManager manager) {
 
         Button sprintBtn = new Button("Sprint");
         Button marathonBtn = new Button("Marathon");

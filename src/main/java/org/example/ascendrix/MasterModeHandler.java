@@ -11,7 +11,7 @@ public class MasterModeHandler implements GameModeHandler{
     private MasterSectionHandler sectionHandler;
     private int currentSpdLv = 1;
     private long startTime = -1;
-    private int level = 0;
+    private int level = 0;  
     private MasterRollPhase masterRollPhase = MasterRollPhase.NORMAL;
     private static final double[] SPEED_LEVEL = {1, 1.2, 1.4, 1.6};
 
@@ -25,9 +25,6 @@ public class MasterModeHandler implements GameModeHandler{
     }
 
     @Override
-    public boolean supportsPerfectClear() { return true; }
-
-    @Override
     public MasterRuleset getRuleset() {
         return ruleset;
     }
@@ -39,32 +36,65 @@ public class MasterModeHandler implements GameModeHandler{
         }
         return tier;
     }
+    @Override
+    public void onPiecePlaced(GameEngine game) {
+        level++;
+        updateSpeedLevel();
+        ruleset.updateGravity(level, currentSpdLv);
+        ruleset.updateLockDelay(getLockDelayForSpeedLevel(), 15);
+        ruleset.are.trigger(false, System.nanoTime()); // spawn ARE
+    }
+
+    private void updateSpeedLevel() {
+        int newSpdLv = /* section cool trigger logic */ currentSpdLv;
+        if (newSpdLv != currentSpdLv) // always false
+            {
+            currentSpdLv = newSpdLv;
+            if (currentSpdLv == 2 && sectionHandler.missedCools() >= 2)
+                ruleset.are.setOverride(2,
+                        MasterARETable.getSpawnDelay(2),
+                        MasterARETable.getLineClearDelay(2));
+            else
+                ruleset.are.clearOverrides();
+        }
+    }
 
     @Override
     public void onLinesCleared(int lines, SpinType spin, int dropRows, DropType dropType, GameEngine game) {
-        level++;
-        if (lines > 0 && level % 100 == 99)
-            level++; // push past the cap on line clear
-        checkRollTransition();
         hud.showClear(spin, lines, System.nanoTime());
+
+        if (lines == 0) {
+            gradeHandler.resetCombo();
+            return;
+        }
+
+        if (lines > 0)
+            ruleset.are.trigger(true, System.nanoTime());
+
         switch(lines) {
             case 1 -> level += 1;
             case 2 -> level += 2;
             case 3 -> level += 3;
             case 4 -> level += 6;
         }
+
+        checkRollTransition();
+
         int tier = getTier(currentSpdLv);
-
         gradeHandler.decay(tier, masterRollPhase);
-
-        if (lines == 0) {
-            hud.showClear(spin, lines, System.nanoTime());
-            gradeHandler.resetCombo();
-            return;
-        }
         gradeHandler.calculate(lines, spin, tier, masterRollPhase);
     }
 
+
+    private long getLockDelayForSpeedLevel() {
+        return switch(currentSpdLv) {
+            case 1 -> 600_000_000L;  // 600ms - default
+            case 2 -> 400_000_000L;  // 400ms - tightened
+            case 3 -> 200_000_000L;  // 200ms - tightened further
+            case 4 -> 100_000_000L;  // 100ms - very tight
+            default -> 600_000_000L;
+        };
+    }
     private void checkRollTransition() {
         if (level == 999) {
             MasterRollPhase newPhase = sectionHandler.meetsInvisibleRequirements(timer.getElapsedSeconds())
@@ -94,4 +124,5 @@ public class MasterModeHandler implements GameModeHandler{
         g.setFill(Color.WHITE);
         g.fillText("Level: " + level, 240, 420);
     }
+
 }

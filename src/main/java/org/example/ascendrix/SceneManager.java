@@ -11,7 +11,7 @@ public class SceneManager {
     }
 
     public void showMenu() {
-        MenuScene menu = new MenuScene(this, timer);
+        MenuScene menu = new MenuScene(this);
         stage.setScene(menu.getScene());
     }
 

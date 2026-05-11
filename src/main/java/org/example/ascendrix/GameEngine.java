@@ -18,6 +18,8 @@ public class GameEngine {
     // Hold slot + Line clear handling
     public int totalLines = 0;
     private boolean holdUsed = false;
+    private boolean waitingToSpawn = false;
+    private long spawnWaitStart = -1;
     // Render
     private final GameRenderer renderer;
     private long lastUpdate = -1;
@@ -26,7 +28,7 @@ public class GameEngine {
 
     // Game state handling
     public GameState state;
-    public GameModeHandler mode_handler;
+    public GameModeHandler modeHandler;
     private final InputBuffer inputBuffer = new InputBuffer();
     public GamePhase phase;
 
@@ -52,7 +54,7 @@ public class GameEngine {
 
 
     public GameEngine(GameRenderer renderer, GameModeHandler modeHandler) {
-        this.mode_handler = modeHandler;
+        this.modeHandler = modeHandler;
         this.rulesetHandler = modeHandler.getRuleset();
         this.handling = this.rulesetHandler.handling;
 
@@ -91,7 +93,7 @@ public class GameEngine {
         renderer.renderCurrentPiece(current);
         renderer.renderNext(queue.getPreview());
         renderer.renderHold(holdPiece);
-        renderer.renderHUD(mode_handler, timer, now);
+        renderer.renderHUD(modeHandler, timer, now);
         renderer.renderCountdown(phase, countdown);
 
     }
@@ -125,8 +127,12 @@ public class GameEngine {
         //tick++;
 
         rulesetHandler.handling.update(now, input, this);
-        rulesetHandler.gravity.update(now, this);
-        rulesetHandler.lockDelay.update(now, this);
+        if (phase != GamePhase.PLAYING) return;
+        handleSpawnDelay();
+        if (!waitingToSpawn) {
+            rulesetHandler.gravity.update(now, this);
+            rulesetHandler.lockDelay.update(now, this);
+        }
     }
     /* ========================== GAME LOGIC  ========================== */
     // Vertical piece offset
@@ -135,24 +141,38 @@ public class GameEngine {
             return 4;
         return 5;
     }
+
     public boolean isSpawning() {
-        return spawning;
+        return spawning || waitingToSpawn;
     }
+
     private void spawnBlock() {
         TetrominoType type = queue.next();
         TetrominoHandler piece = new TetrominoHandler(type, SPAWN_X, getSpawnYOffset(type));
         holdUsed = false;
+        current = piece; // assign first
 
-        if (!canPlace(piece.getBlocks(), piece.x, piece.y)) {
-            current = piece;
+        // IHS
+        if (inputBuffer.consumeHold()) {
+            hold();
+            return;
+        }
+
+        // IRS
+        if (inputBuffer.consumeRotateCW()) {
+            rotateCW();
+        } else if (inputBuffer.consumeRotateCCW()) {
+            rotateCCW();
+        }
+
+        if (!canPlace(current.getBlocks(), current.x, current.y)) {
             topOut();
             return;
         }
 
         spawning = true;
-        piece.movedBeforeRotation = true;
-        piece.movedSinceLastRotation = true;
-        current = piece;
+        current.movedBeforeRotation = true;
+        current.movedSinceLastRotation = true;
         spawning = false;
     }
     public void hold() {
@@ -261,24 +281,38 @@ public class GameEngine {
         }
 
         int cleared = clearLines();
-        if (mode_handler.supportsPerfectClear() && cleared > 0 && isPerfectClear()) {
-            System.out.println("how tf");
+        if (modeHandler.supportsPerfectClear() && cleared > 0 && isPerfectClear()) {
             renderer.renderPerfectClear();
         }
         totalLines += cleared;
-        if (mode_handler.supportsPerfectClear()) {
-            mode_handler.setPerfectClearFlag(cleared > 0 && isPerfectClear());
+        if (modeHandler.supportsPerfectClear()) {
+            modeHandler.setPerfectClearFlag(cleared > 0 && isPerfectClear());
         }
-        mode_handler.onLinesCleared(cleared, spin, pendingDropRows, pendingDropType, this); // was deleted
+        modeHandler.onPiecePlaced(this);
+        modeHandler.onLinesCleared(cleared, spin, pendingDropRows, pendingDropType, this); // was deleted
         // Reset dropBonus for Marathon
         pendingDropRows = 0;
         pendingDropType = DropType.NONE;
 
-
-        spawnBlock();
+        waitingToSpawn = true;
+        rulesetHandler.are.trigger(false, System.nanoTime());
+        modeHandler.onPiecePlaced(this);
     }
 
-
+    public void onBlockLocked() {
+        waitingToSpawn = true;
+        spawnWaitStart = System.nanoTime();
+        modeHandler.onPiecePlaced(this);
+    }
+    // In update loop
+    private void handleSpawnDelay() {
+        if (!waitingToSpawn) return;
+        if (rulesetHandler.are.isDone(System.nanoTime())) {
+            waitingToSpawn = false;
+            rulesetHandler.are.reset();
+            spawnBlock();
+        }
+    }
     // Ghost piece handler
     public int getGhostY() {
         int y = current.y;

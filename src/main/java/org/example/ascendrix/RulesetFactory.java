@@ -5,7 +5,7 @@ public class RulesetFactory {
         return switch (mode) {
             case SPRINT -> SprintRuleset.create();
             case MARATHON -> MarathonRuleset.create();
-            case MASTER -> null;
+            case MASTER -> MasterRuleset.create();
             case OVERDRIVE -> null;
         };
     }

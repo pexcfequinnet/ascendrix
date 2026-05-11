@@ -18,7 +18,7 @@ public class MarathonRuleset extends RulesetHandler {
 
     public void onLevelChanged(int level) {
         long gravityNs = gravityNsForLevel(level);
-        ((GravityHandler) gravity).setFallNs(gravityNs);
+        gravity.setFallNs(gravityNs);
         config.sdfNs = gravityNs / 20;
         if (level >= 5) {
             config.dasNs = 122_000_000L; // faster DAS at lv5+
@@ -36,6 +36,8 @@ public class MarathonRuleset extends RulesetHandler {
                 handling,
                 new GravityHandler(gravityNsForLevel(1)),
                 new LockDelayHandler(600_000_000L, 15),
+                new AREHandler(100_000_000L, 50_000_000L),
+
                 rotationSystem
         );
         ((LockDelayHandler) lockDelay).setLockResetLimit(15);

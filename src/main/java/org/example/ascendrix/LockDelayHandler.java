@@ -1,7 +1,7 @@
 package org.example.ascendrix;
 
 public class LockDelayHandler implements LockDelay {
-    private final long lockNs;
+    private long lockNs;
 
     private long lockStartTime = -1;
     private long lastResetTime = -1;
@@ -10,6 +10,11 @@ public class LockDelayHandler implements LockDelay {
 
     public void setLockResetLimit(int lockResetLimit) {
         this.lockResetLimit = lockResetLimit;
+    }
+
+    @Override
+    public void setLockNs(long delayNs) {
+        this.lockNs = delayNs;
     }
 
     public LockDelayHandler(long lockNs, int lockResetLimit) {
@@ -43,6 +48,8 @@ public class LockDelayHandler implements LockDelay {
     public void onMoveOrRotate(long now) {
         tryResetLockDelay(now);
     }
+
+
 
     private void tryResetLockDelay(long now) {
         if (lockStartTime != -1 && lockResetCount < lockResetLimit) {

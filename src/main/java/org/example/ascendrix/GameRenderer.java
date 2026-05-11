@@ -100,7 +100,7 @@ public class GameRenderer extends Canvas {
     public void renderGhostPiece(TetrominoHandler current, int ghostY) {
         if (current == null) return;
         GraphicsContext gc = getGraphicsContext2D();
-        gc.setGlobalAlpha(0.3);
+        gc.setGlobalAlpha(0.7);
         gc.setFill(current.type.color);
         for (int[] p : current.getBlocks()) {
             int screenY = ghostY + p[1] - HIDDEN_ROWS; // apply offset

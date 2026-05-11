@@ -11,6 +11,7 @@ public class GravityHandler implements Gravity {
 
     public void setFallNs(long fallNs) {
         this.fallNs = fallNs;
+        this.lastFallTime = -1;
     }
 
     @Override
