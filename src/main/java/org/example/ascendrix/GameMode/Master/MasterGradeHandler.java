@@ -65,7 +65,7 @@ public class MasterGradeHandler {
         return values[values.length - 1];
     }
 
-    private <T extends Enum<T> & MasterRollPhase.GradeScale> double getFloor(T[] values, T target) {
+    public <T extends Enum<T> & MasterRollPhase.GradeScale> double getFloor(T[] values, T target) {
         double cumulative = 0;
         for (T g : values) {
             if (g == target) return cumulative;
@@ -73,7 +73,19 @@ public class MasterGradeHandler {
         }
         return 0;
     }
+    public double getCurrentFloor() {
+        if (rollPhase == MasterRollPhase.NORMAL)
+            return getFloor(MasterGrade.values(), currentGrade);
+        else
+            return getFloor(MasterRollGrade.values(), currentRollGrade);
+    }
 
+    public double getNextFloor() {
+        if (rollPhase == MasterRollPhase.NORMAL)
+            return getCurrentFloor() + currentGrade.threshold();
+        else
+            return getCurrentFloor() + currentRollGrade.threshold();
+    }
     private void applyCombo(int lines) {
         if (lines >= 2 && combo > 1) {
             grade += comboBonus;
