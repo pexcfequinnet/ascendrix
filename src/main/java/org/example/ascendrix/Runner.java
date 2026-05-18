@@ -2,6 +2,7 @@ package org.example.ascendrix;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
+import org.example.ascendrix.UI.SceneManager;
 
 public class Runner extends Application {
     @Override
