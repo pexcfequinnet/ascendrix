@@ -1,7 +1,7 @@
 package org.example.ascendrix.MainGame.Ruleset;
 
 import org.example.ascendrix.GameMode.Marathon.MarathonRuleset;
-import org.example.ascendrix.GameMode.Marathon.MasterRuleset;
+import org.example.ascendrix.GameMode.Master.MasterRuleset;
 import org.example.ascendrix.GameMode.Sprint.SprintRuleset;
 import org.example.ascendrix.GameMode.GameMode;
 

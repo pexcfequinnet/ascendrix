@@ -11,6 +11,9 @@ import org.example.ascendrix.Rotation.RotationSystem;
 import org.example.ascendrix.Rotation.SRS.StandardRotationSystem;
 
 public class SprintRuleset extends RulesetHandler {
+    private static long frame_to_ns(double F) {
+        return Math.round(1_000_000_000.0 * F / 60.0);
+    }
     private static final long GRAVITY_NS = 1_500_000_000; // 1.5s
     private static final long LOCK_NS    = 750_000_000; // 0.75s
     public SprintRuleset(Handling handling, RotationSystem rotationSystem) {
@@ -23,12 +26,12 @@ public class SprintRuleset extends RulesetHandler {
         );
     }
     public static MovementConfig sprintConfig(){
-        MovementConfig c = new MovementConfig();
-        c.dasNs = 100_000_000;
-        c.instantArr = true;
-        c.instantSdf = true;
+        MovementConfig config = new MovementConfig();
+        config.dasNs = Math.round(frame_to_ns(6));
+        config.instantArr = true;
+        config.instantSdf = true;
 
-        return c;
+        return config;
     }
     public static SprintRuleset create() {
         return new SprintRuleset(

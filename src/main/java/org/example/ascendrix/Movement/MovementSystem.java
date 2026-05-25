@@ -4,7 +4,7 @@ import org.example.ascendrix.Input.InputHandler;
 import org.example.ascendrix.MainGame.Engine.GameEngine;
 
 public class MovementSystem implements Handling {
-    private final MovementConfig config;
+    public final MovementConfig config;
 
     private long dasStartTime = -1;
     private long lastArrTime = -1;

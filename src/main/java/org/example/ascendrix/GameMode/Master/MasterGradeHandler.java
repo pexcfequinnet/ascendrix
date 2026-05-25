@@ -106,5 +106,12 @@ public class MasterGradeHandler {
 
     public void setPhase(MasterRollPhase phase) { this.rollPhase = phase; }
     public double getGrade() { return grade; }
+    public void applyRegret() {
+        MasterGrade previous = currentGrade.ordinal() > 0
+                ? MasterGrade.values()[currentGrade.ordinal() - 1]
+                : MasterGrade.G9;
+        grade = getFloor(MasterGrade.values(), previous);
+        currentGrade = previous;
+    }
     private double getCurrentThreshold() { /* return current rank's floor */ return 0; }
 }

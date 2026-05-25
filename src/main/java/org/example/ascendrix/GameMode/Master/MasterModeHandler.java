@@ -2,7 +2,6 @@ package org.example.ascendrix.GameMode.Master;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import org.example.ascendrix.GameMode.Marathon.MasterRuleset;
 import org.example.ascendrix.MainGame.Engine.GameEngine;
 import org.example.ascendrix.GameMode.GameModeHandler;
 import org.example.ascendrix.MainGame.Engine.GameTimer;
@@ -14,11 +13,12 @@ public class MasterModeHandler implements GameModeHandler {
     private final MasterRuleset ruleset;
     private final GameTimer timer;
     private final MasterGradeHandler gradeHandler = new MasterGradeHandler();
+    private final MasterSectionHandler sectionHandler = new MasterSectionHandler();
     private final HUDHelper hud = new HUDHelper();
-    private MasterSectionHandler sectionHandler;
     private int currentSpdLv = 1;
     private long startTime = -1;
-    private int level = 0;  
+    private int level = 0;
+    private int lastSection = 0;
     private MasterRollPhase masterRollPhase = MasterRollPhase.NORMAL;
     private static final double[] SPEED_LEVEL = {1, 1.2, 1.4, 1.6};
 
@@ -45,6 +45,7 @@ public class MasterModeHandler implements GameModeHandler {
     }
     @Override
     public void onPiecePlaced(GameEngine game) {
+        checkSectionTransition();
         updateSpeedLevel();
         ruleset.updateGravity(level, currentSpdLv);
         ruleset.updateLockDelay(getLockDelayForSpeedLevel(), 15);
@@ -52,17 +53,29 @@ public class MasterModeHandler implements GameModeHandler {
     }
 
     private void updateSpeedLevel() {
-        int newSpdLv = /* section cool trigger logic */ currentSpdLv;
-        if (newSpdLv != currentSpdLv) // always false
-            {
-            currentSpdLv = newSpdLv;
-            if (currentSpdLv == 2 && sectionHandler.missedCools() >= 2)
-                ruleset.are.setOverride(2,
-                        MasterARETable.getSpawnDelay(2),
-                        MasterARETable.getLineClearDelay(2));
-            else
-                ruleset.are.clearOverrides();
-        }
+        int newSpdLv = calculateSpeedLevel();
+        if (newSpdLv == currentSpdLv) return;
+
+        currentSpdLv = newSpdLv;
+        ruleset.updateGravity(level, currentSpdLv);
+        ruleset.updateLockDelay(getLockDelayForSpeedLevel(), 15);
+        ruleset.updateARE(currentSpdLv);
+        ruleset.updateHandling(currentSpdLv);
+
+        if (currentSpdLv == 2 && sectionHandler.missedCools() >= 2)
+            ruleset.are.setOverride(2,
+                    MasterARETable.getSpawnDelay(2),
+                    MasterARETable.getLineClearDelay(2));
+        else
+            ruleset.are.clearOverrides();
+    }
+
+    private int calculateSpeedLevel() {
+        boolean allCoolsSoFar = sectionHandler.missedCools() == 0;
+        if (level >= 700 && allCoolsSoFar) return 4;
+        if (level >= 400 && allCoolsSoFar) return 3;
+        if (level >= 300 && allCoolsSoFar) return 2;
+        return 1;
     }
 
     @Override
@@ -76,6 +89,7 @@ public class MasterModeHandler implements GameModeHandler {
             case 4 -> level += 7;
             default -> level++;
         }
+        checkSectionTransition();
 
         if (lines == 0) {
             gradeHandler.resetCombo();
@@ -93,7 +107,17 @@ public class MasterModeHandler implements GameModeHandler {
         gradeHandler.calculate(lines, spin, tier, masterRollPhase);
     }
 
+    private void checkSectionTransition() {
+        int currentSection = level / 100;
+        if (currentSection <= lastSection) return;
 
+        MasterSectionHandler.SectionResult result = sectionHandler.evaluateSection(lastSection, timer.getElapsedSeconds());
+        if (result == MasterSectionHandler.SectionResult.REGRET)
+            gradeHandler.applyRegret();
+
+        lastSection = currentSection;
+        updateSpeedLevel();
+    }
     private long getLockDelayForSpeedLevel() {
         return switch(currentSpdLv) {
             case 2 -> 600_000_000L;
@@ -174,6 +198,4 @@ public class MasterModeHandler implements GameModeHandler {
         g.setFill(Color.WHITE);
         g.fillText("" + sectionEnd, 240, 520);
     }
-
-
 }

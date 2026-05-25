@@ -1,5 +1,7 @@
 package org.example.ascendrix.GameMode.Master;
 
+import org.example.ascendrix.Movement.*;
+
 public class MasterGravityTable {
     private record GravityEntry(int level, int gravity) {
     }
@@ -76,4 +78,6 @@ public class MasterGravityTable {
         }
         return TABLE[0].gravity();
     }
+
+
 }

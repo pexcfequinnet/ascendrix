@@ -1,7 +1,7 @@
 package org.example.ascendrix.GameMode.Master;
 
 public class MasterSectionHandler {
-
+    public enum SectionResult { COOL, NEUTRAL, REGRET };
     public int missedCools() {
         return 1;
     }
@@ -68,7 +68,21 @@ public class MasterSectionHandler {
             if (level >= SECTIONS[i].start && level <= SECTIONS[i].end) return i;
         return -1;
     }
+    public SectionResult evaluateSection(int sectionIndex, double sectionTime) {
+        SectionData section = SECTIONS[sectionIndex];
+        double coolThreshold = getCoolThreshold(sectionIndex);
+        double regretThreshold = REGRET_LIMITS[sectionIndex];
 
+        if (sectionTime <= coolThreshold && /* quad check */ true) {
+            cools[sectionIndex] = true;
+            lockedCoolTime = sectionTime + 2.0;
+            return SectionResult.COOL;
+        } else if (sectionTime > regretThreshold) {
+            regrets[sectionIndex] = true;
+            return SectionResult.REGRET;
+        }
+        return SectionResult.NEUTRAL;
+    }
     public boolean meetsInvisibleRequirements(double totalTime) {
         return allCools() && hasCool(9) && totalTime < 510; // 8:30 in seconds
     }
