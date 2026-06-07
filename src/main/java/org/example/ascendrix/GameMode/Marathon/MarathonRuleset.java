@@ -46,7 +46,8 @@ public class MarathonRuleset extends RulesetHandler {
                 handling,
                 new GravityHandler(gravityNsForLevel(1)),
                 new LockDelayHandler(600_000_000L, 15),
-                new AREHandler(100_000_000L, 50_000_000L),
+                new AREHandler(100_000_000L, 50_000_000L, 150_000_000L),
+
 
                 rotationSystem
         );

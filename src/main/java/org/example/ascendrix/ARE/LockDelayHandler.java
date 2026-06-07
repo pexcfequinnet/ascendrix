@@ -4,9 +4,8 @@ import org.example.ascendrix.MainGame.Engine.GameEngine;
 
 public class LockDelayHandler implements LockDelay {
     private long lockNs;
-
     private long lockStartTime = -1;
-    private long lastResetTime = -1;
+    private long lastMoveTime = -1;  // separate from lockStartTime
     private int lockResetCount = 0;
     private int lockResetLimit;
 
@@ -26,21 +25,17 @@ public class LockDelayHandler implements LockDelay {
 
     @Override
     public void update(long now, GameEngine game) {
-
         if (game.isOnGround()) {
-
-            // Start counting whe block is on ground
             if (lockStartTime == -1) {
                 lockStartTime = now;
-                lastResetTime = now;
+                lastMoveTime = now;
             }
 
-            // Lock delay check
-            if (now - lastResetTime >= lockNs) {
+            // Check against last move time, not lock start
+            if (now - lastMoveTime >= lockNs) {
                 reset();
-                game.lockBlock();
+                game.lockBlock(now);
             }
-
         } else {
             reset();
         }
@@ -55,16 +50,15 @@ public class LockDelayHandler implements LockDelay {
 
     private void tryResetLockDelay(long now) {
         if (lockStartTime != -1 && lockResetCount < lockResetLimit) {
-            lastResetTime = now;
+            lockStartTime = now; // reset the timer itself, not just lastMoveTime
+            lastMoveTime = now;
             lockResetCount++;
         }
     }
 
     private void reset() {
         lockStartTime = -1;
-        lastResetTime = -1;
+        lastMoveTime = -1;
         lockResetCount = 0;
     }
-
-
 }

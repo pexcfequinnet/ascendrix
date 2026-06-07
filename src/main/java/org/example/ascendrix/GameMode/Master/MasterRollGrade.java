@@ -2,12 +2,12 @@ package org.example.ascendrix.GameMode.Master;
 
 public enum MasterRollGrade implements MasterRollPhase.GradeScale {
 
-    MK("MasterK", 1),
-    MV("MasterV", 2),
-    MO("MasterO", 4),
-    MS("MasterS", 6),
-    MM("MasterM", 9),
-    GM("Grand Master", 12);
+    MK("MasterK", 1.2),
+    MV("MasterV", 1.2),
+    MO("MasterO", 1.2),
+    MS("MasterS", 1.2),
+    MM("MasterM", 2.4),
+    GM("Grand Master", 3.6);
 
 
     public final String label;

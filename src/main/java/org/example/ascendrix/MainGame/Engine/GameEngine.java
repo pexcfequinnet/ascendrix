@@ -2,19 +2,20 @@ package org.example.ascendrix.MainGame.Engine;
 // Library
 import javafx.animation.AnimationTimer;
 import org.example.ascendrix.GameMode.GameModeHandler;
-import org.example.ascendrix.Input.InputBuffer;
-import org.example.ascendrix.Input.InputHandler;
+import org.example.ascendrix.GameMode.Master.FadeMap;
+import org.example.ascendrix.Input.*;
 import org.example.ascendrix.MainGame.Renderer.GameRenderer;
-import org.example.ascendrix.MainGame.Renderer.HUDHelper;
 import org.example.ascendrix.MainGame.Ruleset.RulesetHandler;
-import org.example.ascendrix.Movement.Handling;
+import org.example.ascendrix.Movement.*;
+import org.example.ascendrix.Rotation.RotationDirection;
 import org.example.ascendrix.Rotation.SRS.SRSSpinDetector;
 import org.example.ascendrix.Rotation.SpinType;
-import org.example.ascendrix.Tetromino.TetrominoHandler;
-import org.example.ascendrix.Tetromino.TetrominoQueue;
-import org.example.ascendrix.Tetromino.TetrominoType;
+import org.example.ascendrix.Tetromino.*;
 
 public class GameEngine {
+
+    private AnimationTimer gameLoop = null;
+
     // Input Handling
     public InputHandler input;
     // Board handling
@@ -23,21 +24,25 @@ public class GameEngine {
     private static final int SPAWN_X = 3;
     public final TetrominoType[][] board = new TetrominoType[ROWS][COLS];
     // Tetromino + Bag queue handling
-    private boolean spawning = false;
+    private final boolean spawning = false;
     private TetrominoHandler current;
     private final TetrominoQueue queue;
     private TetrominoType holdPiece = null;
     // Hold slot + Line clear handling
+
+    private TetrominoType pendingSpawnType = null;
     public int totalLines = 0;
+    private boolean holdInProgress = false;
     private boolean holdUsed = false;
     private boolean waitingToSpawn = false;
-    private long spawnWaitStart = -1;
+    // Perfect clear Handling
+
+    private long perfectClearDisplayTime = -1;
+    private static final long PERFECT_CLEAR_DURATION = 750_000_000L; // 0.75s
+
     // Render
     private final GameRenderer renderer;
     private long lastUpdate = -1;
-    private final HUDHelper hud = new HUDHelper(); // for HUD stats, such as time or level
-    //private long tick = 0;
-
     // Game state handling
     public GameState state;
     public GameModeHandler modeHandler;
@@ -50,11 +55,19 @@ public class GameEngine {
     public SRSSpinDetector spinDetector = new SRSSpinDetector();
     public TetrominoQueue.DropType pendingDropType;
     public int pendingDropRows = 0;
-
+    // Delay handling
+    private boolean waitingForClearAnim = false;
+    private long clearAnimStart = -1;
+    private long clearAnimNs = 0;
     // Countdown timer
     public int countdown = 1;
     private long lastTick;
     public GameTimer timer = new GameTimer(); // Timer
+
+    // End roll for needed game modes
+    private FadeMap fadeMap; // Master Rolls
+    private int[][] lastLockedBlocks;
+    private int lastLockedX, lastLockedY;
     /* ============================== ALL FUNCTIONS ============================== */
     public InputBuffer getInputBuffer() {
         return inputBuffer;
@@ -69,45 +82,53 @@ public class GameEngine {
         this.modeHandler = modeHandler;
         this.rulesetHandler = modeHandler.getRuleset();
         this.handling = this.rulesetHandler.handling;
-
         queue = new TetrominoQueue();
-        spawnBlock();
-
         this.renderer = renderer;
     }
     public void start() {
-        phase = GamePhase.COUNTDOWN; // ← initialize phase
-        lastTick = System.currentTimeMillis();
+        phase = GamePhase.COUNTDOWN;
+        lastTick = System.nanoTime();
 
-        new AnimationTimer() {
+        gameLoop = new AnimationTimer() {
+            @Override
             public void handle(long now) {
-                if (phase == GamePhase.COUNTDOWN) {
-                    updateCountdown();
-                }
-                if (phase == GamePhase.PLAYING) {
-                    update(now);
-                }
-                render();
+                if (phase == GamePhase.COUNTDOWN) updateCountdown(now);
+                if (phase == GamePhase.PLAYING) update(now);
+                render(now);
             }
-        }.start();
+        };
+
+        gameLoop.start();
     }
 
-    // Rendering function: Initialize the game
-    private void render() {
-        long now = System.nanoTime();
-        renderer.renderBoard(board);
-        if (getPhase() == GamePhase.GAME_OVER)
-            renderer.renderGameOver();
-        if (getPhase() == GamePhase.CLEARED)
-            renderer.renderGameComplete();
+    public void stop() {
+        // 3. GỌI BIẾN RA ĐỂ DỪNG
+        if (gameLoop != null) {
+            gameLoop.stop();
+        }
+    }
 
-        renderer.renderGhostPiece(current, getGhostY());
-        renderer.renderCurrentPiece(current);
+
+    // Rendering function: Initialize the game
+    private void render(long now) {
+        renderer.renderBoard(board, modeHandler.getBoardContext(board));
+        if (getPhase() == GamePhase.GAME_OVER)  renderer.renderGameOver();
+        if (getPhase() == GamePhase.CLEARED)    renderer.renderGameComplete();
+
+        if (!waitingToSpawn && !waitingForClearAnim && current != null) {
+            renderer.renderCurrentPiece(current);
+            renderer.renderGhostPiece(current, getGhostY());
+        }
+
+        if (perfectClearDisplayTime != -1 && now - perfectClearDisplayTime < PERFECT_CLEAR_DURATION)
+            renderer.renderPerfectClear();
+        else
+            perfectClearDisplayTime = -1;
+
         renderer.renderNext(queue.getPreview());
         renderer.renderHold(holdPiece);
         renderer.renderHUD(modeHandler, timer, now);
         renderer.renderCountdown(phase, countdown);
-
     }
     public GamePhase getPhase() { return phase; }
     public boolean isRunning() { return state == GameState.RUNNING; }
@@ -124,24 +145,25 @@ public class GameEngine {
     }
 
     private void update(long now) {
-        if (lastUpdate == -1) {
-            lastUpdate = now;
+        if (lastUpdate == -1) lastUpdate = now;
+        if (phase != GamePhase.PLAYING) return;
+
+        fadeMap = modeHandler.getFadeMap();
+        modeHandler.update(now, this); // moved after phase check
+
+        if (fadeMap != null) {
+            fadeMap.updateBoardFade(now, board);
+            if (fadeMap.isFadingBoard()) return;
         }
 
-//        long delta = now - lastUpdate;
-//        lastUpdate = now;
-//
-//        if (delta > 100_000_000) {
-//            delta = 100_000_000;
-//        }
+        if (waitingForClearAnim) {
+            handleClearAnim(now);
+            return;
+        }
 
+        handleSpawnDelay(now, fadeMap);
 
-        //tick++;
-
-        rulesetHandler.handling.update(now, input, this);
-        if (phase != GamePhase.PLAYING) return;
-        handleSpawnDelay();
-        if (!waitingToSpawn) {
+        if (!waitingToSpawn && current != null) {
             rulesetHandler.handling.update(now, input, this);
             rulesetHandler.gravity.update(now, this);
             rulesetHandler.lockDelay.update(now, this);
@@ -160,36 +182,67 @@ public class GameEngine {
     }
 
     private void spawnBlock() {
-        TetrominoType type = queue.next();
-        TetrominoHandler piece = new TetrominoHandler(type, SPAWN_X, getSpawnYOffset(type));
+        TetrominoType type = pendingSpawnType != null ? pendingSpawnType : queue.next();
+        pendingSpawnType = null;
         holdUsed = false;
-        current = piece; // assign first
+        // DAS Charge
+        MovementSystem movement =
+                (MovementSystem) rulesetHandler.handling;
 
-        // IHS
-        if (inputBuffer.consumeHold()) {
-            hold();
-            return;
+        if (movement.isDasCharged(System.nanoTime())) {
+            move(movement.getDirection());
         }
+        // IHS
+        if (!holdInProgress && modeHandler.supportsIHS() && inputBuffer.isHoldHeld()) {
+            holdInProgress = true;
+            if (holdPiece == null) {
+                holdPiece = type;
+                pendingSpawnType = null;
+                holdInProgress = false;
+                holdUsed = true;
+                spawnBlock(); // spawn next from queue
+                return;
+            } else {
+                TetrominoType temp = holdPiece;
+                holdPiece = type;
+                type = temp; // swap type, continue spawning with hold piece
+            }
+            holdUsed = true;
+            holdInProgress = false;
+        }
+
+        current = new TetrominoHandler(type, SPAWN_X, getSpawnYOffset(type));
 
         // IRS
-        if (inputBuffer.consumeRotateCW()) {
-            rotateCW();
-        } else if (inputBuffer.consumeRotateCCW()) {
-            rotateCCW();
-        }
+        if (modeHandler.supportsIRS()) {
 
+            RotationDirection irs =
+                    input.getHeldIRS();
+
+            if (irs != null) {
+                rotate(irs);
+            }
+        }
+        // IMS
+        int dir = inputBuffer.getBufferedDirection();
+        if (dir != 0) {
+            move(dir);
+            inputBuffer.clearDirection();
+        }
         if (!canPlace(current.getBlocks(), current.x, current.y)) {
             topOut();
             return;
         }
 
-        spawning = true;
         current.movedBeforeRotation = true;
         current.movedSinceLastRotation = true;
-        spawning = false;
     }
     public void hold() {
+        if (waitingToSpawn || waitingForClearAnim) return;
         if (holdUsed) return;
+        if (holdInProgress) return;
+
+        holdInProgress = true;
         TetrominoType currentType = current.type;
         if (holdPiece == null) {
             holdPiece = currentType;
@@ -200,10 +253,11 @@ public class GameEngine {
             current = new TetrominoHandler(temp, 3, getSpawnYOffset(temp));
         }
         holdUsed = true;
+        holdInProgress = false;
     }
 
     // Line clear system
-    private int clearLines() {
+    private int clearLines(FadeMap fadeMap) {
         int linesCleared = 0;
         int writeY = ROWS - 1;
 
@@ -221,13 +275,16 @@ public class GameEngine {
                 linesCleared++;
             } else {
                 System.arraycopy(board[readY], 0, board[writeY], 0, COLS);
+
+                if (fadeMap != null) {
+                    fadeMap.copyRow(readY, writeY);
+                }
+
                 writeY--;
             }
         }
-        for (int y = 0; y < linesCleared; y++) {
-            for (int x = 0; x < COLS; x++) {
-                board[y][x] = null;
-            }
+        if (fadeMap != null && linesCleared > 0) {
+            fadeMap.clearTopRows(linesCleared);
         }
 
         return linesCleared;
@@ -235,6 +292,8 @@ public class GameEngine {
 
     // Movement
     public void move(int dir) {
+        if (waitingToSpawn || waitingForClearAnim) return;
+        if (fadeMap != null && fadeMap.isFadingBoard()) return;
         if (canMove(current.x + dir, current.y)) {
             current.x += dir;
 
@@ -246,6 +305,8 @@ public class GameEngine {
     }
 
     public void softDrop(long now) {
+        if (waitingToSpawn) return;
+        if (fadeMap != null && fadeMap.isFadingBoard()) return;
         if (canMove(current.x, current.y + 1)) {
             current.y++;
             current.droppedByPlayer = true;
@@ -258,72 +319,84 @@ public class GameEngine {
     }
 
     public void hardDrop(long now) {
+        if (waitingToSpawn) return;
+        if (fadeMap != null && fadeMap.isFadingBoard()) return;
         int rows = 0;
         int y = current.y;
-        while (canMove(current.x, y + 1)) {
-            y++;
-            rows++;
-        }
+        while (canMove(current.x, y + 1)) { y++; rows++; }
         if (rows > 0) current.droppedByPlayer = true;
         current.y = y;
-
-        if (rows > 0) {
-            pendingDropRows += rows;
-            pendingDropType = TetrominoQueue.DropType.HARD;
-        }
-
-        if (current.y > current.yAtRotation){
-            current.movedAfterRotation = true;
-        }
-
-
-
-            // Important: notify lock system
+        if (rows > 0) { pendingDropRows += rows; pendingDropType = TetrominoQueue.DropType.HARD; }
+        if (current.y > current.yAtRotation) current.movedAfterRotation = true;
         notifyMoveOrRotate(now);
-        lockBlock();
+        lockBlock(now, modeHandler.getFadeMap());
     }
-
-    public void lockBlock() {
+    public void lockBlock(long now) {
+        lockBlock(now, fadeMap);
+    }
+    public void lockBlock(long now, FadeMap fadeMap) {
         SpinType spin = spinDetector.detect(current, this);
+        lastLockedBlocks = current.getBlocks();
+        lastLockedX = current.x;
+        lastLockedY = current.y;
         for (int[] p : current.getBlocks()) {
             int x = current.x + p[0];
             int y = current.y + p[1];
-            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+            if (y >= 0 && y < ROWS && x >= 0 && x < COLS)
                 board[y][x] = current.type;
-            }
         }
 
-        int cleared = clearLines();
-        if (modeHandler.supportsPerfectClear() && cleared > 0 && isPerfectClear()) {
-            renderer.renderPerfectClear();
-        }
-        totalLines += cleared;
-        if (modeHandler.supportsPerfectClear()) {
-            modeHandler.setPerfectClearFlag(cleared > 0 && isPerfectClear());
-        }
+        int cleared = clearLines(fadeMap);
+        boolean perfectClear = modeHandler.supportsPerfectClear() && cleared > 0 && isPerfectClear();
+
         modeHandler.onPiecePlaced(this);
-        modeHandler.onLinesCleared(cleared, spin, pendingDropRows, pendingDropType, this); // was deleted
-        // Reset dropBonus for Marathon
+
+        if (perfectClear) {
+            triggerPerfectClear(now);
+        }
+
+        totalLines += cleared;
+        modeHandler.setPerfectClearFlag(perfectClear);
+        modeHandler.onLinesCleared(cleared, spin, pendingDropRows, pendingDropType, this);
+
         pendingDropRows = 0;
         pendingDropType = TetrominoQueue.DropType.NONE;
 
-        waitingToSpawn = true;
-        rulesetHandler.are.trigger(false, System.nanoTime());
-        modeHandler.onPiecePlaced(this);
+        if (cleared > 0) {
+            triggerLineClearAnim(rulesetHandler.are.getClearAnimNs(), now);
+        } else {
+            waitingToSpawn = true;
+            rulesetHandler.are.trigger(false, now);
+        }
     }
 
-    public void onBlockLocked() {
-        waitingToSpawn = true;
-        spawnWaitStart = System.nanoTime();
-        modeHandler.onPiecePlaced(this);
+    public void triggerPerfectClear(long now) {
+        perfectClearDisplayTime = now;
     }
+    public void triggerLineClearAnim(long ns, long now) {
+        waitingForClearAnim = true;
+        clearAnimStart = now;
+        clearAnimNs = ns;
+    }
+
+    private void handleClearAnim(long now) {
+        if (!waitingForClearAnim) return;
+        if (now - clearAnimStart >= clearAnimNs) {
+            waitingForClearAnim = false;
+            waitingToSpawn = true;
+            rulesetHandler.are.trigger(true, now);
+        }
+    }
+
     // In update loop
-    private void handleSpawnDelay() {
+    private void handleSpawnDelay(long now, FadeMap fadeMap) {
         if (!waitingToSpawn) return;
-        if (rulesetHandler.are.isDone(System.nanoTime())) {
+        if (fadeMap != null && fadeMap.isFadingBoard()) return;
+        if (rulesetHandler.are.isDone(now)) {
             waitingToSpawn = false;
             rulesetHandler.are.reset();
             spawnBlock();
+            modeHandler.onPieceSpawned(this);
         }
     }
     // Ghost piece handler
@@ -339,23 +412,53 @@ public class GameEngine {
     public void notifyMoveOrRotate(long now) {
         rulesetHandler.lockDelay.onMoveOrRotate(now);
     }
-
+    public void rotate(RotationDirection dir) {
+        switch (dir) {
+            case CW -> rotateCW();
+            case CCW -> rotateCCW();
+        }
+    }
     public void rotateCW() {
-        int prevRotation = current.rotation;
-        rulesetHandler.rotationSystem.tryRotate(current, 1, this);
-        if (current.rotation != prevRotation) notifyMoveOrRotate(System.nanoTime());
-        current.lastMoveWasRotation = true;
-        current.yAtRotation = current.y;
+        if (waitingToSpawn || waitingForClearAnim) return;
+        if (fadeMap != null && fadeMap.isFadingBoard()) return;
+
+
+        boolean rotated =
+                rulesetHandler.rotationSystem.tryRotate(
+                        current,
+                        RotationDirection.CW,
+                        this
+                );
+
+        if (rotated) {
+            notifyMoveOrRotate(System.nanoTime());
+
+            current.lastMoveWasRotation = true;
+            current.yAtRotation = current.y;
+        }
     }
 
     public void rotateCCW() {
-        int prevRotation = current.rotation;
-        rulesetHandler.rotationSystem.tryRotate(current, -1, this);
-        if (current.rotation != prevRotation) notifyMoveOrRotate(System.nanoTime());
-        current.lastMoveWasRotation = true;
-        current.yAtRotation = current.y;
+        if (waitingToSpawn || waitingForClearAnim) return;
+        if (fadeMap != null && fadeMap.isFadingBoard()) return;
+
+        boolean rotated =
+                rulesetHandler.rotationSystem.tryRotate(
+                        current,
+                        RotationDirection.CCW,
+                        this
+                );
+        if (rotated) {
+            notifyMoveOrRotate(System.nanoTime());
+
+            current.lastMoveWasRotation = true;
+            current.yAtRotation = current.y;
+        }
     }
 
+    public void clearGame() {
+        phase = GamePhase.CLEARED; // successfully completed
+    }
     // Logic
     public boolean canMove(int newX, int newY) {
         return canPlace(current.getBlocks(), newX, newY);
@@ -395,10 +498,8 @@ public class GameEngine {
         return true;
     }
     // Countdown + timer
-    public void updateCountdown() {
-        long now = System.currentTimeMillis();
-
-        if (now - lastTick >= 1000) {
+    public void updateCountdown(long now) {
+        if (now - lastTick >= 1_000_000_000L) {
             countdown--;
             lastTick = now;
 
@@ -406,8 +507,18 @@ public class GameEngine {
                 phase = GamePhase.PLAYING;
                 timer.reset();
                 timer.start();
+                waitingToSpawn = true;
+                rulesetHandler.are.trigger(false, now);
             }
         }
     }
-}
 
+
+    public int[][] getLastLockedBlocks() { return lastLockedBlocks; }
+    public int getLastLockedX()          { return lastLockedX; }
+    public int getLastLockedY()          { return lastLockedY; }
+
+    public void debugSetLevel(int level) {
+        modeHandler.debugSetLevel(level);
+    }
+}

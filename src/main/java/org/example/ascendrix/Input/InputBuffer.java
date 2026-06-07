@@ -1,47 +1,40 @@
 package org.example.ascendrix.Input;
 
-public class InputBuffer {
+import org.example.ascendrix.Rotation.RotationDirection;
 
+public class InputBuffer {
+    // IMS
+    private int bufferedDirection = 0;
+    public void bufferDirection(int dir) {
+        bufferedDirection = dir;
+    }
+    public void clearDirection() {
+        bufferedDirection = 0;
+    }
+    public int getBufferedDirection() {
+        return bufferedDirection;
+    }
     // IRS
-    private boolean bufferedRotateCW;
-    private boolean bufferedRotateCCW;
+    private RotationBuffer rotationBuffer = RotationBuffer.NONE;
+    private RotationDirection bufferedRotation = RotationDirection.NONE;
+
+    public RotationDirection consumeRotation() {
+        RotationDirection result = bufferedRotation;
+        bufferedRotation = null;
+        return result;
+    }
 
     // IHS
     private boolean bufferedHold;
-
-    public void bufferRotateCW() {
-        bufferedRotateCW = true;
-    }
-
-    public void bufferRotateCCW() {
-        bufferedRotateCCW = true;
-    }
 
     public void bufferHold() {
         bufferedHold = true;
     }
 
-    public void clear() {
-        bufferedRotateCW = false;
-        bufferedRotateCCW = false;
-        bufferedHold = false;
-    }
+    public void clearHold()      { bufferedHold      = false; }
+    public boolean isHoldHeld()      { return bufferedHold; }
 
-    public boolean consumeRotateCW() {
-        boolean v = bufferedRotateCW;
-        bufferedRotateCW = false;
-        return v;
-    }
-
-    public boolean consumeRotateCCW() {
-        boolean v = bufferedRotateCCW;
-        bufferedRotateCCW = false;
-        return v;
-    }
-
-    public boolean consumeHold() {
-        boolean v = bufferedHold;
-        bufferedHold = false;
-        return v;
+    public void bufferRotation(RotationDirection dir) {
+        bufferedRotation = dir;
     }
 }

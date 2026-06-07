@@ -22,17 +22,21 @@ public class GameScene {
 
         GameEngine engine = new GameEngine(renderer, modeHandler);
 
-        InputHandler input = new InputHandler(engine, engine::isRunning);
+        InputHandler input = new InputHandler(engine);
         engine.setInput(input);
 
         StackPane root = new StackPane(renderer);
-        scene = new Scene(root, 800, 600);
+        scene = new Scene(root, 800, 700);
 
         input.attach(scene);
 
         // ESC to menu
         scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == KeyCode.ESCAPE) manager.showMenu();
+            if (e.getCode() == KeyCode.ESCAPE) {
+                engine.stop();
+                manager.showMenu();
+            }
+
         });
 
         engine.start();

@@ -9,15 +9,15 @@ public class MasterSectionHandler {
     public record SectionData(int start, int end, double timeLimit, int minQuads) {}
 
     private static final SectionData[] SECTIONS = {
-            new SectionData(0,   70,  52.00, 1),
-            new SectionData(100, 170, 52.00, 1),
-            new SectionData(200, 270, 50.00, 1),
-            new SectionData(300, 370, 47.00, 1),
-            new SectionData(400, 470, 45.00, 1),
-            new SectionData(500, 570, 42.00, 1),
-            new SectionData(600, 670, 42.00, 1),
-            new SectionData(700, 770, 38.00, 1),
-            new SectionData(800, 870, 35.00, 1),
+            new SectionData(0,   70,  52.00, 3),
+            new SectionData(100, 170, 52.00, 3),
+            new SectionData(200, 270, 50.00, 3),
+            new SectionData(300, 370, 47.00, 3),
+            new SectionData(400, 470, 45.00, 3),
+            new SectionData(500, 570, 42.00, 3),
+            new SectionData(600, 670, 42.00, 3),
+            new SectionData(700, 770, 38.00, 3),
+            new SectionData(800, 870, 35.00, 3),
             new SectionData(900, 999, -1,    6)  // -1 = no time limit
     };
 
@@ -63,6 +63,11 @@ public class MasterSectionHandler {
     public boolean hasRegret(int idx) { return regrets[idx]; }
     public boolean hasCool(int idx)   { return cools[idx]; }
 
+    public int getCoolCount() {
+        int count = 0;
+        for (boolean c : cools) if (c) count++;
+        return count;
+    }
     private int getSectionIndex(int level) {
         for (int i = 0; i < SECTIONS.length; i++)
             if (level >= SECTIONS[i].start && level <= SECTIONS[i].end) return i;
@@ -73,7 +78,8 @@ public class MasterSectionHandler {
         double coolThreshold = getCoolThreshold(sectionIndex);
         double regretThreshold = REGRET_LIMITS[sectionIndex];
 
-        if (sectionTime <= coolThreshold && /* quad check */ true) {
+        /* quad check */
+        if (sectionTime <= coolThreshold) {
             cools[sectionIndex] = true;
             lockedCoolTime = sectionTime + 2.0;
             return SectionResult.COOL;
@@ -83,7 +89,9 @@ public class MasterSectionHandler {
         }
         return SectionResult.NEUTRAL;
     }
-    public boolean meetsInvisibleRequirements(double totalTime) {
-        return allCools() && hasCool(9) && totalTime < 510; // 8:30 in seconds
+    public boolean meetsInvisibleRequirements(double totalTime, MasterGrade currentGrade) {
+        return allCools() && hasCool(9) && totalTime < 510
+                && currentGrade == MasterGrade.M;
     }
+
 }

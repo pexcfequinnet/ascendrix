@@ -2,7 +2,7 @@ package org.example.ascendrix.GameMode.Sprint;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import javafx.scene.text.TextAlignment;
+import javafx.scene.text.*;
 import org.example.ascendrix.MainGame.Renderer.HUDHelper;
 import org.example.ascendrix.MainGame.Engine.GameEngine;
 import org.example.ascendrix.GameMode.GameModeHandler;
@@ -24,8 +24,9 @@ public class SprintModeHandler implements GameModeHandler {
     }
     private final HUDHelper hud = new HUDHelper();
 
-    @Override
-    public void setPerfectClearFlag(boolean flag){}
+    @Override public boolean supportsIRS() { return false; }
+    @Override public boolean supportsIHS() { return false; }
+    @Override public void setPerfectClearFlag(boolean flag){}
 
     @Override
     public boolean supportsPerfectClear() {return true;}
@@ -55,38 +56,83 @@ public class SprintModeHandler implements GameModeHandler {
 
     @Override
     public void renderHUD(GraphicsContext g, GameTimer timer, long now) {
-        // Render spin
+        // -----------------------------------------------------------------
+        // 1. RENDER ACTION NOTIFICATIONS
+        // -----------------------------------------------------------------
+        g.save();
         if (hud.shouldDisplay(now)) {
             double alpha = hud.getAlpha(now);
             g.setGlobalAlpha(alpha);
 
-            g.setFill(Color.color(0, 0, 0, 0.6));
-            g.fillRect(160, 150, 70, 60);
+            g.setFill(Color.color(0, 0, 0, 0.75));
+            g.fillRoundRect(140, 150, 110, 50, 10, 10);
 
             g.setFill(Color.ORANGE);
-            g.fillText(hud.getClearText(), 160, 200);
-
-            g.setGlobalAlpha(1.0);
+            g.setFont(Font.font("System", FontWeight.BOLD, 16));
+            g.setTextAlign(TextAlignment.CENTER);
+            g.fillText(hud.getClearText(), 195, 180);
         }
+        g.restore();
 
-        if(b2bActive && b2bStreak > 0)
-        {
+        // -----------------------------------------------------------------
+        // 2. RENDER BACK-TO-BACK (B2B) STREAK
+        // -----------------------------------------------------------------
+        if (b2bActive && b2bStreak > 0) {
+            g.save();
             g.setFill(Color.YELLOW);
-            g.fillText("B2B x" + b2bStreak, 200, 240);
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 18));
+            g.setTextAlign(TextAlignment.CENTER);
+            g.fillText("B2B x" + b2bStreak, 195, 230);
+            g.restore();
         }
+
+
+        // -----------------------------------------------------------------
+        // 3. RENDER SPRINT STATS
+        // -----------------------------------------------------------------
+        g.save();
+        final int LEFT_X = 240;
+        int startY = 400;
+        int spacing = 30;
+
+        g.setTextAlign(TextAlignment.RIGHT);
+
+        g.setFill(Color.LIGHTGREEN);
+        g.setFont(Font.font("System", FontWeight.BOLD, 22));
+        g.fillText("SPRINT", LEFT_X, startY);
+
+        g.setFill(Color.LIGHTGRAY);
+        g.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
+        g.fillText("Lines: ", LEFT_X - 80, startY + spacing);
 
         g.setFill(Color.WHITE);
-        g.setTextAlign(TextAlignment.RIGHT);
-        g.fillText("SPRINT", 240, 400);
+        g.fillText(linesCleared + " / " + targetLines, LEFT_X, startY + spacing);
 
-        long time = timer.getElapsedMs();
-        g.fillText("Time: " + GameTimer.formatTime(time), 240, 420);
-        g.fillText("Lines: " + linesCleared + "/" + targetLines, 240, 440);
+        double progress = Math.min(1.0, (double) linesCleared / targetLines);
+        int barWidth = 120;
+        g.setFill(Color.rgb(40, 40, 40));
+        g.fillRoundRect(LEFT_X - barWidth, startY + spacing + 10, barWidth, 6, 3, 3);
+        if (progress > 0) {
+            g.setFill(Color.LIGHTGREEN);
+            g.fillRoundRect(LEFT_X - barWidth, startY + spacing + 10, barWidth * progress, 6, 3, 3);
+        }
+        g.restore();
+
+        // -----------------------------------------------------------------
+        // 4. RENDER SPRINT TIMER
+        // -----------------------------------------------------------------
+        g.save();
+        final int RIGHT_X = 560;
+        long time = (timer != null) ? timer.getElapsedMs() : 0;
+
         g.setTextAlign(TextAlignment.LEFT);
+        g.setFill(Color.LIGHTGRAY);
+        g.setFont(Font.font("System", FontWeight.BOLD, 16));
+        g.fillText("TIME", RIGHT_X, startY);
 
-
-
-
-
+        g.setFill(Color.WHITE);
+        g.setFont(Font.font("Monospace", FontWeight.BOLD, 28)); // Đổi cỡ chữ lên 28
+        g.fillText(GameTimer.formatTime(time), RIGHT_X, startY + spacing + 5);
+        g.restore();
     }
 }

@@ -3,13 +3,15 @@ package org.example.ascendrix.GameMode.Master;
 public class MasterARETable {
     private record AREEntry(int speedLevel, long spawnNs, long lineClearNs, long clearAnimNs) {}
 
-    private static final long F = 1_000_000_000L / 60;
+    private static long frame_to_ns(double frames) {
+        return Math.round(1_000_000_000.0 * frames / 60.0);
+    }
 
-    private static final AREEntry[] TABLE   = {
-            new AREEntry(1, 27*F, 27*F, 40*F),  // Spd lv1
-            new AREEntry(2, 14*F, 8*F,  20*F),  // Spd lv2
-            new AREEntry(3, 10*F,  8*F,  10*F),   // Spd lv3
-            new AREEntry(4, 6*F,  6*F,  5*F)    // Spd lv4
+    private static final AREEntry[] TABLE = {
+            new AREEntry(1, frame_to_ns(20), frame_to_ns(18), frame_to_ns(22)),  // Spd lv1
+            new AREEntry(2, frame_to_ns(14), frame_to_ns(12), frame_to_ns(16)),  // Spd lv2
+            new AREEntry(3, frame_to_ns(10), frame_to_ns(8),  frame_to_ns(12)),  // Spd lv3
+            new AREEntry(4, frame_to_ns(8),  frame_to_ns(6),  frame_to_ns(8))    // Spd lv4
     };
 
     public static long getSpawnDelay(int level) {
@@ -25,5 +27,8 @@ public class MasterARETable {
         for (AREEntry entry : TABLE)
             if (speedLevel >= entry.speedLevel()) result = entry;
         return result;
+    }
+    public static long getClearAnimDelay(int speedLevel) {
+        return getEntry(speedLevel).clearAnimNs();
     }
 }

@@ -21,7 +21,7 @@ public class SprintRuleset extends RulesetHandler {
                 handling,
                 new GravityHandler(GRAVITY_NS),
                 new LockDelayHandler(LOCK_NS, 15),
-                new AREHandler(0,0),
+                new AREHandler(0, 0, 0),
                 rotationSystem
         );
     }

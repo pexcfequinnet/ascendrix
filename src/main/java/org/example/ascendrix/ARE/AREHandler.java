@@ -9,6 +9,7 @@ public class AREHandler {
     private long lineClearDelayNs;
     private long areStartTime = -1;
     private boolean isLineClear = false;
+    private long clearAnimNs;
 
     // Overrides per speed level
     private final Map<Integer, Long> spawnOverrides = new HashMap<>();
@@ -23,9 +24,10 @@ public class AREHandler {
         spawnOverrides.clear();
         lineClearOverrides.clear();
     }
-    public AREHandler(long spawnDelayNs, long lineClearDelayNs) {
+    public AREHandler(long spawnDelayNs, long lineClearDelayNs, long clearAnimNs) {
         this.spawnDelayNs = spawnDelayNs;
         this.lineClearDelayNs = lineClearDelayNs;
+        this.clearAnimNs = clearAnimNs;
     }
 
     public void trigger(boolean lineClear, long now) {
@@ -51,4 +53,10 @@ public class AREHandler {
     public void setLineClearDelayNs(long lineClearDelayNs) {
         this.lineClearDelayNs = lineClearDelayNs;
     }
+
+    public void setClearAnimNs(long clearAnimNs) {
+        this.clearAnimNs = clearAnimNs;
+    }
+    public long getClearAnimNs() { return clearAnimNs; }
+
 }

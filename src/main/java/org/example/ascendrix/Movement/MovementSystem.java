@@ -16,6 +16,7 @@ public class MovementSystem implements Handling {
     }
 
     private void handleHorizontal(long now, int dir, GameEngine game) {
+
         if (dir != currentDir) {
             currentDir = dir;
             dasStartTime = now;
@@ -70,7 +71,17 @@ public class MovementSystem implements Handling {
 
         handleHorizontal(now, dir, game);
         handleSDF(now, input, game);
-
-        input.tick();
+    }
+    public boolean isDasCharged(long now) {
+        return currentDir != 0
+                && dasStartTime != -1
+                && now - dasStartTime >= config.dasNs;
+    }
+    public int getDirection() {
+        return currentDir;
+    }
+    public void resetDAS() {
+        dasStartTime = -1;
+        lastArrTime = -1;
     }
 }

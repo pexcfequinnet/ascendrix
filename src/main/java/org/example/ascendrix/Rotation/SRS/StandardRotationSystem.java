@@ -1,17 +1,29 @@
 package org.example.ascendrix.Rotation.SRS;
 
 import org.example.ascendrix.MainGame.Engine.GameEngine;
+import org.example.ascendrix.Rotation.RotationDirection;
 import org.example.ascendrix.Rotation.RotationSystem;
 import org.example.ascendrix.Tetromino.TetrominoHandler;
 import org.example.ascendrix.Tetromino.TetrominoType;
 
 public class StandardRotationSystem implements RotationSystem {
     @Override
-    public void tryRotate(TetrominoHandler piece, int dir, GameEngine game) {
-        if (piece.type == TetrominoType.O) return;
+    public boolean tryRotate(TetrominoHandler piece, RotationDirection dir, GameEngine game) {
+        if (piece.type == TetrominoType.O) return false;
 
         int from = piece.rotation;
-        int to = (from + dir + 4) % 4;
+        int to;
+
+        switch (dir) {
+            case CW ->
+                    to = (from + 1) % 4;
+
+            case CCW ->
+                    to = (from + 3) % 4;
+
+            default ->
+                    throw new IllegalStateException();
+        }
 
         int[][] kicks = getKicks(piece.type, from, to);
         int[][] newBlocks = rotatedShape(piece.blocks, piece.type, dir);
@@ -24,10 +36,13 @@ public class StandardRotationSystem implements RotationSystem {
 
             if (game.canPlace(newBlocks, newX, newY)) {
                 piece.applyRotation(newX, newY, to, newBlocks, i, k[0] != 0);
-                return;
+                return true;
             }
         }
+        return false;
     }
+
+
     // JLSTZ piece kick table: https://harddrop.com/wiki/SRS#Wall_kicks
     /* Flipping all y values since JavaFX increase y value downward */
     private static int[][] getJLSTZ(int from, int to) {
@@ -83,7 +98,7 @@ public class StandardRotationSystem implements RotationSystem {
                 (int)Math.round(newY)
         };
     }
-    private int[] rotateCCW(int x, int y, double px, double py) {
+    private static int[] rotateCCW(int x, int y, double px, double py) {
         double relX = x - px;
         double relY = y - py;
 
@@ -96,20 +111,26 @@ public class StandardRotationSystem implements RotationSystem {
         };
     }
 
-    private int[][] rotatedShape(int[][] currentShape, TetrominoType type, int dir) {
+    private int[][] rotatedShape(
+            int[][] currentShape,
+            TetrominoType type,
+            RotationDirection dir
+    ) {
         double[] pivot = getPivot(type);
         int[][] next = new int[currentShape.length][2];
 
         for (int i = 0; i < currentShape.length; i++) {
-            if (dir == 1) {
-                next[i] = rotateCW(
+
+            switch (dir) {
+
+                case CW -> next[i] = rotateCW(
                         currentShape[i][0],
                         currentShape[i][1],
                         pivot[0],
                         pivot[1]
                 );
-            } else {
-                next[i] = rotateCCW(
+
+                case CCW -> next[i] = rotateCCW(
                         currentShape[i][0],
                         currentShape[i][1],
                         pivot[0],
@@ -131,4 +152,6 @@ public class StandardRotationSystem implements RotationSystem {
         }
         return getJLSTZ(from, to);
     }
+
+
 }

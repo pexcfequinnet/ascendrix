@@ -4,7 +4,11 @@ import org.example.ascendrix.MainGame.Engine.GameEngine;
 import org.example.ascendrix.Tetromino.TetrominoHandler;
 
 public interface RotationSystem {
-    void tryRotate(TetrominoHandler piece, int dir, GameEngine game);
+    boolean tryRotate(
+            TetrominoHandler piece,
+            RotationDirection dir,
+            GameEngine game
+    );
 }
 
 

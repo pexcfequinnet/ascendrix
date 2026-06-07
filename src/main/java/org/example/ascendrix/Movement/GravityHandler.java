@@ -26,13 +26,11 @@ public class GravityHandler implements Gravity {
 
         if (now - lastFallTime < fallNs) return;
 
-        // Multi-step handling
         long steps = (now - lastFallTime) / fallNs;
+        steps = Math.min(steps, 25); // cap at 20 steps (1 full board height)
 
         for (int i = 0; i < steps; i++) {
-            if (!game.tryFall()) {
-                break;
-            }
+            if (!game.tryFall()) break;
         }
 
         lastFallTime += steps * fallNs;

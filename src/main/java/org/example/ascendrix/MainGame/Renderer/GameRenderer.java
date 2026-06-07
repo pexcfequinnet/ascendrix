@@ -20,69 +20,147 @@ public class GameRenderer extends Canvas {
     private final int COLS = 10;
     private final int ROWS = 25;
     public final int VISIBLE_ROWS = 20;
-    private final int HIDDEN_ROWS = ROWS - VISIBLE_ROWS;;
+    private final int HIDDEN_ROWS = ROWS - VISIBLE_ROWS;
     private final int OFFSET_X = 250; // Move entire board to the right to make space for HUD
+
+    private final int TOP_PANEL = 50;
     private final int RIGHT_PANEL = 250;
-
+    private final int BOTTOM_PANEL = 50;
     public GameRenderer() {
-        setWidth(OFFSET_X + COLS * TILE + RIGHT_PANEL);  // 250 + 300 + 250 = 800
-        setHeight(VISIBLE_ROWS * TILE);
+        setWidth(OFFSET_X + COLS * TILE + RIGHT_PANEL);
+        setHeight(TOP_PANEL + VISIBLE_ROWS * TILE + BOTTOM_PANEL); // 700px total
     }
 
 
-    public void renderCountdown(GamePhase phase, int countdown){
-        GraphicsContext g = getGraphicsContext2D();
+    public void renderCountdown(GamePhase phase, int countdown) {
+        if (phase != GamePhase.COUNTDOWN) return;
 
-        if (phase == GamePhase.COUNTDOWN) {
+        GraphicsContext gc = getGraphicsContext2D();
+        gc.save();
 
-            String text;
+        String text;
+        Color textColor;
+        Color strokeColor;
 
-            if (countdown > 1) {
-                text = String.valueOf(countdown);
-            } else if (countdown == 1) {
-                text = "READY";
-            } else {
-                text = "GO";
-            }
-
-            g.fillText(text, 200, 300);
+        if (countdown > 1) {
+            text = String.valueOf(countdown);
+            textColor = Color.WHITE;
+            strokeColor = Color.GRAY;
+        } else if (countdown == 1) {
+            text = "READY";
+            textColor = Color.GOLD;
+            strokeColor = Color.DARKORANGE;
+        } else {
+            text = "GO!";
+            textColor = Color.LIMEGREEN;
+            strokeColor = Color.DARKGREEN;
         }
+
+        double centerX = OFFSET_X + (COLS * TILE) / 2.0;
+        double centerY = TOP_PANEL + (VISIBLE_ROWS * TILE) / 2.0;
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setTextBaseline(VPos.CENTER);
+
+        gc.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 54));
+
+        gc.setFill(Color.color(0, 0, 0, 0.6));
+        gc.fillText(text, centerX + 4, centerY + 4);
+
+        gc.setStroke(strokeColor);
+        gc.setLineWidth(3.0);
+        gc.strokeText(text, centerX, centerY);
+
+        gc.setFill(textColor);
+        gc.fillText(text, centerX, centerY);
+
+        gc.restore();
     }
+
     public void renderGameOver() {
         GraphicsContext gc = getGraphicsContext2D();
+        gc.save();
 
-        gc.setFill(Color.WHITE);
-        gc.fillText("GAME OVER", 300, 200);
-        gc.setFill(Color.color(0.5, 0.5, 0.5, 0.8)); // grey with ~80% opacity
-        gc.fillRect(OFFSET_X, 0, COLS * TILE, VISIBLE_ROWS * TILE);
+        gc.setFill(Color.color(0, 0, 0, 0.75));
+        // Sửa lại tọa độ Y và Chiều cao của lớp nền che mờ
+        gc.fillRect(OFFSET_X, TOP_PANEL, COLS * TILE, VISIBLE_ROWS * TILE + BOTTOM_PANEL);
+
+        double centerX = OFFSET_X + (COLS * TILE) / 2.0;
+        // Cộng thêm TOP_PANEL vào trục Y
+        double centerY = TOP_PANEL + (VISIBLE_ROWS * TILE) / 2.0;
+
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setTextBaseline(VPos.CENTER);
+
+        gc.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 44));
+
+        gc.setStroke(Color.DARKRED);
+        gc.setLineWidth(2.5);
+        gc.strokeText("GAME OVER", centerX, centerY - 20);
+
+        gc.setFill(Color.RED);
+        gc.fillText("GAME OVER", centerX, centerY - 20);
+
+        gc.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
+        gc.setFill(Color.LIGHTGRAY);
+        gc.fillText("PRESS RESTART", centerX, centerY + 30);
+
+        gc.restore();
     }
+
     public void renderGameComplete() {
         GraphicsContext gc = getGraphicsContext2D();
+        gc.save();
 
-        gc.setFill(Color.WHITE);
-        gc.fillText("GAME CLEARED", 300, 200);
-        gc.setFill(Color.color(0, 0, 0, 0));
-        gc.fillRect(OFFSET_X, 0, COLS * TILE, VISIBLE_ROWS * TILE);
+        gc.setFill(Color.color(0, 0, 0, 0.6));
+        gc.fillRect(OFFSET_X, TOP_PANEL, COLS * TILE, VISIBLE_ROWS * TILE + BOTTOM_PANEL);
+
+        double centerX = OFFSET_X + (COLS * TILE) / 2.0;
+        double centerY = TOP_PANEL + (VISIBLE_ROWS * TILE) / 2.0;
+
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setTextBaseline(VPos.CENTER);
+
+        gc.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 40));
+
+        gc.setStroke(Color.DARKORANGE);
+        gc.setLineWidth(2.5);
+        gc.strokeText("GAME CLEARED", centerX, centerY - 20);
+
+        gc.setFill(Color.GOLD);
+        gc.fillText("GAME CLEARED", centerX, centerY - 20);
+
+        gc.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
+        gc.setFill(Color.CYAN);
+        gc.fillText("EXCELLENT!", centerX, centerY + 30);
+
+        gc.restore();
     }
 
     // Render board
-    public void renderBoard(TetrominoType[][] board) {
-        int hiddenRows = board.length - VISIBLE_ROWS; // 5 hidden rows at top
+    public void renderBoard(TetrominoType[][] board, BoardRenderContext ctx) {
+        int hiddenRows = board.length - VISIBLE_ROWS;
 
         GraphicsContext gc = getGraphicsContext2D();
         gc.setFill(Color.BLACK);
-        gc.fillRect(OFFSET_X, 0, COLS * TILE, VISIBLE_ROWS * TILE);
+        gc.fillRect(OFFSET_X, 0, COLS * TILE, getHeight());
 
         for (int y = hiddenRows; y < board.length; y++) {
             for (int x = 0; x < COLS; x++) {
-                int screenY = y - hiddenRows; // maps row 5 → pixel row 0
+                int screenY = (y - hiddenRows) * TILE + TOP_PANEL;
 
                 if (board[y][x] != null) {
-                    gc.setFill(board[y][x].color);
-                    gc.fillRect(OFFSET_X + x * TILE, screenY * TILE, TILE, TILE);
+                    double alpha = (ctx != null && ctx.alphaProvider != null)
+                            ? ctx.alphaProvider.getAlpha(x, y)
+                            : 1.0;
+                    if (alpha > 0) {
+                        gc.setGlobalAlpha(alpha);
+                        gc.setFill(board[y][x].color);
+                        gc.fillRect(OFFSET_X + x * TILE, screenY, TILE, TILE);
+                        gc.setGlobalAlpha(1.0);
+                    }
                 }
                 gc.setStroke(Color.DARKGRAY);
-                gc.strokeRect(OFFSET_X + x * TILE, screenY * TILE, TILE, TILE);
+                gc.strokeRect(OFFSET_X + x * TILE, screenY, TILE, TILE);
             }
         }
     }
@@ -95,7 +173,7 @@ public class GameRenderer extends Canvas {
                 int screenY = current.y + p[1] - HIDDEN_ROWS; // apply offset
                 if (screenY < 0) continue; // clip pieces still in vanish zone
                 int x = OFFSET_X + (current.x + p[0]) * TILE;
-                int y = screenY * TILE;
+                int y = (screenY) * TILE + TOP_PANEL;
                 gc.fillRect(x, y, TILE, TILE);
             }
         }
@@ -111,7 +189,7 @@ public class GameRenderer extends Canvas {
             int screenY = ghostY + p[1] - HIDDEN_ROWS; // apply offset
             if (screenY < 0) continue;
             int x = OFFSET_X + (current.x + p[0]) * TILE;
-            int y = screenY * TILE;
+            int y = (screenY) * TILE + TOP_PANEL;
             gc.fillRect(x, y, TILE, TILE);
         }
         gc.setGlobalAlpha(1.0);
@@ -197,11 +275,37 @@ public class GameRenderer extends Canvas {
     public void renderPerfectClear() {
         GraphicsContext gc = getGraphicsContext2D();
         gc.save();
-        gc.setFill(Color.WHITE);
-        gc.setFont(Font.font("Arial", FontWeight.BOLD, 36));
+
+        double centerX = OFFSET_X + (COLS * TILE) / 2.0;
+        double centerY = TOP_PANEL + (VISIBLE_ROWS * TILE) / 2.0;
+
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
-        gc.fillText("ALL CLEAR", 500, 125);
+
+        String mainText = "ALL CLEAR!";
+
+        gc.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 52));
+
+        gc.setFill(Color.color(0, 0, 0, 0.7));
+        gc.fillText(mainText, centerX + 5, centerY + 5);
+
+        gc.setStroke(Color.DARKORANGE);
+        gc.setLineWidth(4.0);
+        gc.strokeText(mainText, centerX, centerY);
+
+        gc.setFill(Color.GOLD);
+        gc.fillText(mainText, centerX, centerY);
+
+        String subText = "- PERFECT -";
+        gc.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
+
+        gc.setStroke(Color.BLACK);
+        gc.setLineWidth(2.0);
+        gc.strokeText(subText, centerX, centerY + 45);
+
+        gc.setFill(Color.WHITE);
+        gc.fillText(subText, centerX, centerY + 45);
+
         gc.restore();
     }
 }

@@ -12,38 +12,33 @@ import org.example.ascendrix.Rotation.SRS.StandardRotationSystem;
 
 public class MasterRuleset extends RulesetHandler {
     private static long frame_to_ns(double frames) {
-        System.out.println(Math.round(1_000_000_000.0 * frames / 60.0));
         return Math.round(1_000_000_000.0 * frames / 60.0);
     }
-    public final AREHandler are = new AREHandler(
-            MasterARETable.getSpawnDelay(0),
-            MasterARETable.getLineClearDelay(0)
-    );
     public MasterRuleset(Handling handling, RotationSystem rotationSystem) {
         super(
                 handling,
-                new GravityHandler(MasterGravityTable.toNs(MasterGravityTable.getGravity(0))),
+                new GravityHandler(MasterGravityTable.getGravityWithMultiplier(1, 0)),
                 new LockDelayHandler(600_000_000L, 15),
-                new AREHandler(MasterARETable.getSpawnDelay(1), MasterARETable.getLineClearDelay(1)),
+                new AREHandler(MasterARETable.getSpawnDelay(1), MasterARETable.getLineClearDelay(1),MasterARETable.getClearAnimDelay(1)),
                 rotationSystem
         );
+        updateARE(1); // initialize ARE values
         updateHandling(1); // initialize with speed level 1 values
     }
 
-    public void updateGravity(int level, int speedLevel) {
-        int gravity = MasterGravityTable.getGravityWithMultiplier(level, speedLevel);
-        long ns = MasterGravityTable.toNs(gravity);
-        this.gravity.setFallNs(ns);
-
+    public void updateGravity(int speedLevel, int levelWithinSection) {
+        long ns = MasterGravityTable.getGravityWithMultiplier(speedLevel, levelWithinSection);
+        gravity.setFallNs(ns);
     }
     public void updateLockDelay(long delayNs, int maxMoves) {
         lockDelay.setLockNs(delayNs);
         lockDelay.setLockResetLimit(maxMoves);
     }
 
-    public void updateARE(int level) {
-        are.setSpawnDelayNs(MasterARETable.getSpawnDelay(level));
-        are.setLineClearDelayNs(MasterARETable.getLineClearDelay(level));
+    public void updateARE(int speedLevel) {
+        are.setSpawnDelayNs(MasterARETable.getSpawnDelay(speedLevel));
+        are.setLineClearDelayNs(MasterARETable.getLineClearDelay(speedLevel));
+        are.setClearAnimNs(MasterARETable.getClearAnimDelay(speedLevel));
     }
 
     public static MasterRuleset create() {
@@ -58,19 +53,19 @@ public class MasterRuleset extends RulesetHandler {
         MovementConfig config = ((MovementSystem) handling).config;
         switch (speedLevel) {
             case 1 -> {
-                config.dasNs = frame_to_ns(16);
+                config.dasNs = frame_to_ns(12);
                 config.arrNs = frame_to_ns(1);
             }
             case 2 -> {
-                config.dasNs = frame_to_ns(10);
+                config.dasNs = frame_to_ns(9);
                 config.arrNs = frame_to_ns(0.75);
             }
             case 3 -> {
-                config.dasNs = frame_to_ns(8);
+                config.dasNs = frame_to_ns(7.5);
                 config.arrNs = frame_to_ns(0.5);
             }
             case 4 -> {
-                config.dasNs = frame_to_ns(6);
+                config.dasNs = frame_to_ns(5.5);
                 config.arrNs = frame_to_ns(0.25);
             }
         }
