@@ -3,6 +3,7 @@ package org.example.ascendrix.Input;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import org.example.ascendrix.ARE.LockDelayHandler;
 import org.example.ascendrix.MainGame.Engine.GameEngine;
 import org.example.ascendrix.MainGame.Engine.GamePhase;
 import org.example.ascendrix.Rotation.RotationDirection;
@@ -121,6 +122,7 @@ public class InputHandler {
                 case F2 -> game.debugSetLevel(499);  // jump to section 3
                 case F3 -> game.debugSetLevel(899);  // trigger speed level check
                 case F4 -> game.debugSetLevel(995);
+                case F5 -> game.debugSetLevel(1495);
             }
         });
 
@@ -130,7 +132,8 @@ public class InputHandler {
             switch (code) {
                 case A -> {
                     left = false;
-                    updateDirectionBuffer();}
+                    updateDirectionBuffer();
+                }
                 case D -> {
                     right = false;
                     updateDirectionBuffer();}

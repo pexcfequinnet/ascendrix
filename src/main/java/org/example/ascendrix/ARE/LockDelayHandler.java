@@ -1,13 +1,18 @@
 package org.example.ascendrix.ARE;
 
 import org.example.ascendrix.MainGame.Engine.GameEngine;
+import org.example.ascendrix.Tetromino.TetrominoHandler; // Import class này vào
 
 public class LockDelayHandler implements LockDelay {
     private long lockNs;
     private long lockStartTime = -1;
-    private long lastMoveTime = -1;  // separate from lockStartTime
+    private long lastMoveTime = -1;
     private int lockResetCount = 0;
     private int lockResetLimit;
+
+    private int lowestY = -1;
+
+    private TetrominoHandler lastPiece = null;
 
     public void setLockResetLimit(int lockResetLimit) {
         this.lockResetLimit = lockResetLimit;
@@ -25,19 +30,33 @@ public class LockDelayHandler implements LockDelay {
 
     @Override
     public void update(long now, GameEngine game) {
+        if (game.current == null) return;
+
+        if (game.current != lastPiece) {
+            reset();
+            lastPiece = game.current;
+        }
+
+        int currentY = game.current.y;
+
+        if (currentY > lowestY) {
+            lowestY = currentY;
+            resetLimitAndTimer(now);
+        }
+
         if (game.isOnGround()) {
             if (lockStartTime == -1) {
                 lockStartTime = now;
                 lastMoveTime = now;
             }
 
-            // Check against last move time, not lock start
             if (now - lastMoveTime >= lockNs) {
                 reset();
                 game.lockBlock(now);
             }
         } else {
-            reset();
+            lockStartTime = -1;
+            lastMoveTime = -1;
         }
     }
 
@@ -46,19 +65,26 @@ public class LockDelayHandler implements LockDelay {
         tryResetLockDelay(now);
     }
 
-
-
     private void tryResetLockDelay(long now) {
-        if (lockStartTime != -1 && lockResetCount < lockResetLimit) {
-            lockStartTime = now; // reset the timer itself, not just lastMoveTime
-            lastMoveTime = now;
-            lockResetCount++;
+        if (lockStartTime != -1) {
+            if (lockResetCount < lockResetLimit) {
+                lockStartTime = now;
+                lastMoveTime = now;
+                lockResetCount++;
+            }
         }
     }
 
-    private void reset() {
+    public void reset() {
         lockStartTime = -1;
         lastMoveTime = -1;
+        lockResetCount = 0;
+        lowestY = -1;
+    }
+
+    private void resetLimitAndTimer(long now) {
+        lockStartTime = now;
+        lastMoveTime = now;
         lockResetCount = 0;
     }
 }

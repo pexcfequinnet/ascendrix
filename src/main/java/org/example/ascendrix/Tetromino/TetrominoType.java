@@ -31,11 +31,17 @@ public enum TetrominoType {
 
     L(new int[][]{
         {2,0},{0,1},{1,1},{2,1}
-    }, Color.ORANGE);
+    }, Color.ORANGE),
 
+    GARBAGE(new int[][]{
+        {0,0}
+    }, Color.GRAY),
+
+    BONE(new int[][]{
+        {0,0}
+    }, Color.PURPLE);
     public final int[][] blocks;
     public final Color color;
-
     TetrominoType(int[][] blocks, Color color) {
         this.blocks = blocks;
         this.color = color;

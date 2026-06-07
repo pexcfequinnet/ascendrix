@@ -1,5 +1,7 @@
 package org.example.ascendrix.Tetromino;
 
+import java.util.Arrays;
+
 public class TetrominoHandler {
 
     public int x, y;
@@ -15,6 +17,11 @@ public class TetrominoHandler {
     public int lastKickIndex = -1;
     public int yAtRotation = -1;
     public boolean movedSinceLastRotation = true;
+
+    private static final TetrominoType[] BAG_PIECES = Arrays.stream(TetrominoType.values())
+            .filter(t -> t != TetrominoType.GARBAGE)
+            .toArray(TetrominoType[]::new);
+
     public TetrominoHandler(TetrominoType type, int x, int y) {
         this.type = type;
         this.x = x;

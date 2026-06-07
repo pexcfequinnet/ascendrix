@@ -1,6 +1,7 @@
 package org.example.ascendrix.Tetromino;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class TetrominoQueue {
 
@@ -13,7 +14,9 @@ public class TetrominoQueue {
     }
 
     private void refillBag() {
-        List<TetrominoType> list = new ArrayList<>(Arrays.asList(TetrominoType.values()));
+        List<TetrominoType> list = Arrays.stream(TetrominoType.values())
+                .filter(t -> t != TetrominoType.GARBAGE && t != TetrominoType.BONE)
+                .collect(Collectors.toList());
         Collections.shuffle(list);
         bag.addAll(list);
     }

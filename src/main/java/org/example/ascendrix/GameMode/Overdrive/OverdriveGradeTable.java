@@ -2,14 +2,6 @@ package org.example.ascendrix.GameMode.Overdrive;
 
 public enum OverdriveGradeTable {
     G1("1"),
-    G2("2"),
-    G3("3"),
-    G4("4"),
-    G5("5"),
-    G6("6"),
-    G7("7"),
-    G8("8"),
-    G9("9"),
     S1("S1"),
     S2("S2"),
     S3("S3"),
@@ -24,8 +16,8 @@ public enum OverdriveGradeTable {
     S12("S12"),
     S13("S13"),
     S14("S14"),
-    S15("S15");
-
+    S15("S15"),
+    S15_PLUS("S15+");
     public final String label;
 
     OverdriveGradeTable(String label) {
@@ -33,7 +25,7 @@ public enum OverdriveGradeTable {
     }
 
     public boolean isMax() {
-        return this == S15;
+        return this == S15_PLUS;
     }
 
     public OverdriveGradeTable next() {

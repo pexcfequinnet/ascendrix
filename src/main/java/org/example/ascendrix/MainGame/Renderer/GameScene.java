@@ -20,7 +20,7 @@ public class GameScene {
         GameRenderer renderer = new GameRenderer();
         GameModeHandler modeHandler = ModeHandlerFactory.create(mode, timer);
 
-        GameEngine engine = new GameEngine(renderer, modeHandler);
+        GameEngine engine = new GameEngine(renderer, modeHandler, mode);
 
         InputHandler input = new InputHandler(engine);
         engine.setInput(input);

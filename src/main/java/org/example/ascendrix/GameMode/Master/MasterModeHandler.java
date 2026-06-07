@@ -92,13 +92,11 @@ public class MasterModeHandler implements GameModeHandler {
 
     private void checkRollTimeout(long now, GameEngine game) {
         if (!rollTriggered || masterRollPhase == MasterRollPhase.NORMAL) return;
-        if (rollStartTime == -1) rollStartTime = now;
-        if (now - rollStartTime >= ROLL_DURATION_NS) {
-            rollTriggered = false;
-            masterRollPhase = MasterRollPhase.NORMAL;
+        System.out.println("rollTimeout: elapsed=" + (now - rollStartTime) / 1_000_000_000.0 + "s limit=" + ROLL_DURATION_NS / 1_000_000_000.0 + "s");
+        if (now - rollStartTime >= ROLL_DURATION_NS)
             onRollComplete(game);
-        }
     }
+
     @Override
     public void setPerfectClearFlag(boolean flag) {}
     public MasterModeHandler(GameTimer timer) {
@@ -188,16 +186,17 @@ public class MasterModeHandler implements GameModeHandler {
         int tier = getTier(currentSpdLv);
         gradeHandler.decay(tier, masterRollPhase);
         gradeHandler.calculate(lines, spin, tier, masterRollPhase);
+
+
     }
 
     private void checkSectionTransition() {
         int currentSection = level / 100;
 
+        // Evaluate at x80 mark - only once per section
         if (level % 100 >= 80 && lastEvaluatedSection < currentSection) {
-
-            MasterSectionHandler.SectionResult result = sectionHandler.evaluateSection(currentSection, timer.getElapsedSeconds());
-
             lastEvaluatedSection = currentSection;
+            MasterSectionHandler.SectionResult result = sectionHandler.evaluateSection(currentSection, timer.getElapsedSeconds());
 
             if (result == MasterSectionHandler.SectionResult.COOL) {
                 triggerCoolDisplay(System.nanoTime());
@@ -215,10 +214,11 @@ public class MasterModeHandler implements GameModeHandler {
                 gravityAtCeiling = false;
             }
         }
+
+        // Section boundary - only update speed and gravity, no re-evaluation
         if (currentSection > lastSection) {
             lastSection = currentSection;
             sectionStartLevel = currentSection * 100;
-
             updateSpeedLevel();
             ruleset.updateGravity(currentSpdLv, level - sectionStartLevel);
         }
@@ -422,7 +422,6 @@ public class MasterModeHandler implements GameModeHandler {
 
             double boardX = 250;
             double boardWidth = 300;
-            // Đã sửa: 50 + 600 = 650
             double boardBottomY = 650;
             double bottomPanelHeight = 40;
 
@@ -460,7 +459,29 @@ public class MasterModeHandler implements GameModeHandler {
     @Override
     public FadeMap getFadeMap() { return fadeMap; }
 
+    @Override
+    public long getSortValue() {
+        // Lấy Rank chuẩn từ Handler
+        MasterRollPhase.GradeScale active = gradeHandler.getActiveGrade();
 
+        // Tính toán điểm sắp xếp
+        long baseSortValue = 0;
+
+        if (active instanceof MasterGrade mg) {
+            // MasterGrade: Từ G9 (0) đến M (27)
+            baseSortValue = mg.ordinal();
+        }
+        else if (active instanceof MasterRollGrade rg) {
+            // MasterRollGrade: Cộng dồn tiếp. MK (28) đến GM (33)
+            baseSortValue = MasterGrade.values().length + rg.ordinal();
+        }
+        return (baseSortValue * 1000) + this.level;
+    }
+
+    @Override
+    public String getDisplayValue() {
+        return gradeHandler.getDisplayGrade();
+    }
     ///// DEBUG: REMOVE IF DONE TESTING /////
     public void debugSetLevel(int targetLevel) {
         level = targetLevel;

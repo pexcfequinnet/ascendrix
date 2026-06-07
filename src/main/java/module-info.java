@@ -4,7 +4,8 @@ module org.example.ascendrix {
 
     requires com.almasb.fxgl.all;
     requires javafx.graphics;
-
+    requires com.google.gson;
+    opens org.example.ascendrix.GameData to com.google.gson;
     opens org.example.ascendrix to javafx.fxml;
     exports org.example.ascendrix;
     exports org.example.ascendrix.Input;
@@ -37,4 +38,5 @@ module org.example.ascendrix {
     opens org.example.ascendrix.GameMode to javafx.fxml;
     exports org.example.ascendrix.ARE;
     opens org.example.ascendrix.ARE to javafx.fxml;
+
 }

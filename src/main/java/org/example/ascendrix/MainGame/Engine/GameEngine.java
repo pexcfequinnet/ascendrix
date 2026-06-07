@@ -1,6 +1,8 @@
 package org.example.ascendrix.MainGame.Engine;
 // Library
 import javafx.animation.AnimationTimer;
+import org.example.ascendrix.GameData.ScoreManager;
+import org.example.ascendrix.GameMode.GameMode;
 import org.example.ascendrix.GameMode.GameModeHandler;
 import org.example.ascendrix.GameMode.Master.FadeMap;
 import org.example.ascendrix.Input.*;
@@ -11,6 +13,8 @@ import org.example.ascendrix.Rotation.RotationDirection;
 import org.example.ascendrix.Rotation.SRS.SRSSpinDetector;
 import org.example.ascendrix.Rotation.SpinType;
 import org.example.ascendrix.Tetromino.*;
+
+import java.util.Arrays;
 
 public class GameEngine {
 
@@ -25,7 +29,7 @@ public class GameEngine {
     public final TetrominoType[][] board = new TetrominoType[ROWS][COLS];
     // Tetromino + Bag queue handling
     private final boolean spawning = false;
-    private TetrominoHandler current;
+    public TetrominoHandler current;
     private final TetrominoQueue queue;
     private TetrominoType holdPiece = null;
     // Hold slot + Line clear handling
@@ -46,6 +50,7 @@ public class GameEngine {
     // Game state handling
     public GameState state;
     public GameModeHandler modeHandler;
+    private final GameMode mode;
     private final InputBuffer inputBuffer = new InputBuffer();
     public GamePhase phase;
 
@@ -68,6 +73,9 @@ public class GameEngine {
     private FadeMap fadeMap; // Master Rolls
     private int[][] lastLockedBlocks;
     private int lastLockedX, lastLockedY;
+    // Garbage map for needed game mode
+    private final boolean[][] garbageMap = new boolean[ROWS][COLS];
+
     /* ============================== ALL FUNCTIONS ============================== */
     public InputBuffer getInputBuffer() {
         return inputBuffer;
@@ -78,7 +86,8 @@ public class GameEngine {
     }
 
 
-    public GameEngine(GameRenderer renderer, GameModeHandler modeHandler) {
+    public GameEngine(GameRenderer renderer, GameModeHandler modeHandler, GameMode mode) {
+        this.mode = mode;
         this.modeHandler = modeHandler;
         this.rulesetHandler = modeHandler.getRuleset();
         this.handling = this.rulesetHandler.handling;
@@ -111,13 +120,13 @@ public class GameEngine {
 
     // Rendering function: Initialize the game
     private void render(long now) {
-        renderer.renderBoard(board, modeHandler.getBoardContext(board));
+        renderer.renderBoard(board, modeHandler.getBoardContext(board), this);
         if (getPhase() == GamePhase.GAME_OVER)  renderer.renderGameOver();
         if (getPhase() == GamePhase.CLEARED)    renderer.renderGameComplete();
 
         if (!waitingToSpawn && !waitingForClearAnim && current != null) {
-            renderer.renderCurrentPiece(current);
-            renderer.renderGhostPiece(current, getGhostY());
+            renderer.renderCurrentPiece(current, this);
+            renderer.renderGhostPiece(current, getGhostY(), this);
         }
 
         if (perfectClearDisplayTime != -1 && now - perfectClearDisplayTime < PERFECT_CLEAR_DURATION)
@@ -125,19 +134,20 @@ public class GameEngine {
         else
             perfectClearDisplayTime = -1;
 
-        renderer.renderNext(queue.getPreview());
+        renderer.renderNext(queue.getPreview(), this);
         renderer.renderHold(holdPiece);
         renderer.renderHUD(modeHandler, timer, now);
         renderer.renderCountdown(phase, countdown);
     }
     public GamePhase getPhase() { return phase; }
-    public boolean isRunning() { return state == GameState.RUNNING; }
 
-    public void end() {         // called by GameModeHandler when goal is reached
+    public void clearGame() {         // called by GameModeHandler when goal is reached
         phase = GamePhase.CLEARED;
         state = GameState.STOPPED;
         timer.pause();
+        saveScoreToManager();
     }
+
     public void topOut() {      // called when a piece can't spawn
         phase = GamePhase.GAME_OVER;
         state = GameState.STOPPED;
@@ -185,13 +195,6 @@ public class GameEngine {
         TetrominoType type = pendingSpawnType != null ? pendingSpawnType : queue.next();
         pendingSpawnType = null;
         holdUsed = false;
-        // DAS Charge
-        MovementSystem movement =
-                (MovementSystem) rulesetHandler.handling;
-
-        if (movement.isDasCharged(System.nanoTime())) {
-            move(movement.getDirection());
-        }
         // IHS
         if (!holdInProgress && modeHandler.supportsIHS() && inputBuffer.isHoldHeld()) {
             holdInProgress = true;
@@ -224,6 +227,7 @@ public class GameEngine {
             }
         }
         // IMS
+
         int dir = inputBuffer.getBufferedDirection();
         if (dir != 0) {
             move(dir);
@@ -231,9 +235,22 @@ public class GameEngine {
         }
         if (!canPlace(current.getBlocks(), current.x, current.y)) {
             topOut();
+            gameOver();
             return;
         }
+        MovementSystem movement =
+                (MovementSystem) rulesetHandler.handling;
+        if (movement.isDasCharged(System.nanoTime())) {
+            int dasDir = movement.getDirection();
+            if (movement.config.instantArr) {
+                while (canMove(current.x + dasDir, current.y)) {
+                    move(dasDir);
+                }
+            } else {
 
+                move(dasDir);
+            }
+        }
         current.movedBeforeRotation = true;
         current.movedSinceLastRotation = true;
     }
@@ -275,6 +292,7 @@ public class GameEngine {
                 linesCleared++;
             } else {
                 System.arraycopy(board[readY], 0, board[writeY], 0, COLS);
+                System.arraycopy(garbageMap[readY], 0, garbageMap[writeY], 0, COLS);
 
                 if (fadeMap != null) {
                     fadeMap.copyRow(readY, writeY);
@@ -283,13 +301,19 @@ public class GameEngine {
                 writeY--;
             }
         }
+
+        // clear top rows
+        for (int y = 0; y <= writeY; y++) {
+            Arrays.fill(board[y], null);
+            Arrays.fill(garbageMap[y], false);
+        }
+
         if (fadeMap != null && linesCleared > 0) {
             fadeMap.clearTopRows(linesCleared);
         }
 
         return linesCleared;
     }
-
     // Movement
     public void move(int dir) {
         if (waitingToSpawn || waitingForClearAnim) return;
@@ -334,6 +358,7 @@ public class GameEngine {
     public void lockBlock(long now) {
         lockBlock(now, fadeMap);
     }
+
     public void lockBlock(long now, FadeMap fadeMap) {
         SpinType spin = spinDetector.detect(current, this);
         lastLockedBlocks = current.getBlocks();
@@ -342,8 +367,12 @@ public class GameEngine {
         for (int[] p : current.getBlocks()) {
             int x = current.x + p[0];
             int y = current.y + p[1];
-            if (y >= 0 && y < ROWS && x >= 0 && x < COLS)
-                board[y][x] = current.type;
+            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+                board[y][x] = modeHandler.isDecolorActive()
+                        ? TetrominoType.BONE
+                        : current.type;
+                garbageMap[y][x] = false;
+            }
         }
 
         int cleared = clearLines(fadeMap);
@@ -456,8 +485,22 @@ public class GameEngine {
         }
     }
 
-    public void clearGame() {
-        phase = GamePhase.CLEARED; // successfully completed
+    public void gameOver() {
+        phase = GamePhase.GAME_OVER;
+
+        if (mode != GameMode.SPRINT) {
+            saveScoreToManager();
+        }
+    }
+    // Save score
+    private void saveScoreToManager() {
+        ScoreManager scoreManager = new ScoreManager();
+
+        // Engine không cần quan tâm đây là mode gì, cứ gọi 2 hàm này là Handler tự lo!
+        long sortValue = modeHandler.getSortValue();
+        String displayValue = modeHandler.getDisplayValue();
+
+        scoreManager.addScore(mode.toString(), "AAA", sortValue, displayValue);
     }
     // Logic
     public boolean canMove(int newX, int newY) {
@@ -520,5 +563,50 @@ public class GameEngine {
 
     public void debugSetLevel(int level) {
         modeHandler.debugSetLevel(level);
+    }
+
+    // Garbage for Overdrive
+    public int getCols() { return COLS; }
+    public int getRows() { return ROWS; }
+
+    public void setGarbageCell(int row, int col) {
+        board[row][col] = TetrominoType.GARBAGE;
+        garbageMap[row][col] = true;
+    }
+
+    public boolean isGarbageCell(int row, int col) {
+        return garbageMap[row][col];
+    }
+
+    public boolean pushBoardUp() {
+        // check if top row has anything
+        for (int col = 0; col < COLS; col++) {
+            if (board[0][col] != null || garbageMap[0][col]) {
+                topOut();
+                return false;
+            }
+        }
+
+        // shift entire board up
+        for (int row = 0; row < ROWS - 1; row++) {
+            System.arraycopy(board[row + 1], 0, board[row], 0, COLS);
+            System.arraycopy(garbageMap[row + 1], 0, garbageMap[row], 0, COLS);
+        }
+        // clear bottom row
+        Arrays.fill(board[ROWS - 1], null);
+        Arrays.fill(garbageMap[ROWS - 1], false);
+        pushCurrentPieceUp();
+        return true;
+    }
+    public void pushCurrentPieceUp() {
+        if (current != null) {
+            current.y--;
+        }
+    }
+    public boolean isColumnEmpty(int col) {
+        for (int row = 0; row < ROWS; row++) {
+            if (board[row][col] != null || garbageMap[row][col]) return false;
+        }
+        return true;
     }
 }

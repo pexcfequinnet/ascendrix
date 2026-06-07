@@ -17,7 +17,7 @@ public class SprintModeHandler implements GameModeHandler {
     private int linesCleared = 0;
     private boolean b2bActive = false;
     private int b2bStreak = 0;
-
+    private long finalTimeMs = 0;
     public SprintModeHandler(int targetLines) {
         this.ruleset = SprintRuleset.create();
         this.targetLines = targetLines;
@@ -34,7 +34,6 @@ public class SprintModeHandler implements GameModeHandler {
     @Override
     public RulesetHandler getRuleset() { return ruleset; }
 
-
     @Override
     public void onLinesCleared(int lines, SpinType spin, int pendingDropRows, TetrominoQueue.DropType pendingDropType, GameEngine game){
         linesCleared += lines;
@@ -45,11 +44,11 @@ public class SprintModeHandler implements GameModeHandler {
         } else {
             b2bStreak = 0;
         }
-
         b2bActive = isB2B; // update after the check
 
         if (linesCleared >= targetLines) {
-            game.end();
+            this.finalTimeMs = game.timer.getElapsedMs();
+            game.clearGame();
         }
         hud.showClear(spin, lines, System.nanoTime());
     }
@@ -124,7 +123,6 @@ public class SprintModeHandler implements GameModeHandler {
         g.save();
         final int RIGHT_X = 560;
         long time = (timer != null) ? timer.getElapsedMs() : 0;
-
         g.setTextAlign(TextAlignment.LEFT);
         g.setFill(Color.LIGHTGRAY);
         g.setFont(Font.font("System", FontWeight.BOLD, 16));
@@ -134,5 +132,14 @@ public class SprintModeHandler implements GameModeHandler {
         g.setFont(Font.font("Monospace", FontWeight.BOLD, 28)); // Đổi cỡ chữ lên 28
         g.fillText(GameTimer.formatTime(time), RIGHT_X, startY + spacing + 5);
         g.restore();
+    }
+    @Override
+    public long getSortValue() {
+        return this.finalTimeMs;
+    }
+
+    @Override
+    public String getDisplayValue() {
+        return GameTimer.formatTime(this.finalTimeMs);
     }
 }

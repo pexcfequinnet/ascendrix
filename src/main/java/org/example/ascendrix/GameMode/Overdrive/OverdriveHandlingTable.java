@@ -6,16 +6,16 @@ public class OverdriveHandlingTable {
     }
 
     public static long getDAS(int level) {
-        if (level == 1500) return frame_to_ns(3.5);
-        if (level >= 1300) return frame_to_ns(4);
-        if (level >= 200) return frame_to_ns(5);
-        if (level >= 100) return frame_to_ns(6.5);
-        return frame_to_ns(7);
+        if (level == 1500) return frame_to_ns(4.5);
+        if (level >= 1200) return frame_to_ns(5);
+        if (level >= 500) return frame_to_ns(5.5);
+        if (level >= 400) return frame_to_ns(6.25);
+        return frame_to_ns(7.5);
     }
     public static long getARR(int level) {
-        if (level >= 1300) return frame_to_ns(0.5);
-        if (level >= 200) return frame_to_ns(0.75);
-        if (level >= 100) return frame_to_ns(1);
-        return frame_to_ns(1.25);
+        if (level >= 1500) return frame_to_ns(0.25);
+        if (level >= 1200) return frame_to_ns(0.5);
+        if (level >= 500) return frame_to_ns(0.75);
+        return frame_to_ns(1);
     }
 }

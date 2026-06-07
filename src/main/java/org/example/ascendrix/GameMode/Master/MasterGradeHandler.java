@@ -3,7 +3,8 @@ package org.example.ascendrix.GameMode.Master;
 import org.example.ascendrix.Rotation.SpinType;
 
 public class MasterGradeHandler {
-    private MasterRollPhase rollPhase;
+    private MasterRollPhase rollPhase = MasterRollPhase.NORMAL;
+    private double rollGrade = 0;
     private double grade = 0;
     private double comboBonus = 0.002;
     int combo = 0;
@@ -18,6 +19,14 @@ public class MasterGradeHandler {
     private static final double[] DECAY_LEVEL = {0, (double)1/7, (double)1/3, 0.04};
     private static final double[] SPEED_LEVEL = {1, 1.2, 1.4, 1.6};
 
+    public String getDisplayGrade() {
+        if (rollPhase == MasterRollPhase.NORMAL)
+            return currentGrade.label;
+        // Only switch to roll grade when first threshold is met
+        if (rollGrade < MasterRollGrade.MK.threshold())
+            return currentGrade.label;
+        return currentRollGrade.label;
+    }
 
     public void decay(int tier, MasterRollPhase phase) {
         double floor = (phase == MasterRollPhase.NORMAL)
@@ -27,6 +36,7 @@ public class MasterGradeHandler {
     }
 
     public void calculate(int lines, SpinType spin, int tier, MasterRollPhase phase) {
+
         if (lines == 0) { combo = 0; return; }
 
         applyCombo(lines);
@@ -44,15 +54,28 @@ public class MasterGradeHandler {
         };
 
         double multiplier = (phase == MasterRollPhase.NORMAL) ? SPEED_LEVEL[tier - 1] : 1.0;
-        grade += (LINE_CLEAR_VALUES[phase.ordinal()][lines - 1] + spinBonus) * multiplier;
+        if (rollPhase != MasterRollPhase.NORMAL)
+            addRollGrade((LINE_CLEAR_VALUES[rollPhase.ordinal()][lines - 1] + spinBonus));
+        else
+            grade += (LINE_CLEAR_VALUES[rollPhase.ordinal()][lines - 1] + spinBonus) * multiplier;
 
         updateGrade(phase);
     }
-
+    // Thêm hàm này vào MasterGradeHandler
+    public MasterRollPhase.GradeScale getActiveGrade() {
+        if (rollPhase == MasterRollPhase.NORMAL) {
+            return currentGrade;
+        }
+        // Nếu đang ở Roll nhưng điểm chưa đủ mốc MK, vẫn tính là rank cũ (M, S9...)
+        if (rollGrade < MasterRollGrade.MK.threshold()) {
+            return currentGrade;
+        }
+        // Đã đủ điểm, chính thức sử dụng Roll Grade (MK, MV...)
+        return currentRollGrade;
+    }
     private void updateGrade(MasterRollPhase phase) {
         if (phase == MasterRollPhase.NORMAL) {
-            MasterGrade newGrade = fromValue(MasterGrade.values(), grade);
-            currentGrade = newGrade;
+            currentGrade = fromValue(MasterGrade.values(), grade);
         }
         else {
             currentRollGrade = fromValue(MasterRollGrade.values(), grade);
@@ -123,10 +146,19 @@ public class MasterGradeHandler {
         double ceiling = floor + MasterGrade.M.threshold();
         return Math.max(0, grade - ceiling);
     }
-
+    public void addRollGrade(double amount) {
+        rollGrade += amount;
+        currentRollGrade = fromValue(MasterRollGrade.values(), rollGrade);
+        MasterRollGrade cap = rollPhase == MasterRollPhase.FADING
+                ? MasterRollGrade.MM : MasterRollGrade.GM;
+        if (currentRollGrade.ordinal() > cap.ordinal())
+            currentRollGrade = cap;
+    }
     public void setPhase(MasterRollPhase phase, double overflow) {
         this.rollPhase = phase;
-        this.grade = overflow; // start roll grade from overflow
+        this.grade = 0; // reset for roll
+        this.rollGrade = 0;
+        this.currentRollGrade = MasterRollGrade.MK;
         updateGrade(phase);
     }
     public double getGrade() { return grade; }

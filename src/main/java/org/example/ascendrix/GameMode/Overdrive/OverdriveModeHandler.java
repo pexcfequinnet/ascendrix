@@ -22,7 +22,7 @@ public class OverdriveModeHandler implements GameModeHandler {
     private int lastSection = 0;
     private int sectionStartLevel = 0;
     private double sectionStartTime = 0;
-
+    private final OverdriveGarbageHandler garbageHandler = new OverdriveGarbageHandler();
     // Time limits
     private static final long TIME_LIMIT_500  = 180_000L; // 3:00 in ms
     private static final long TIME_LIMIT_1000 = 360_000L; // 6:00 in ms
@@ -45,6 +45,7 @@ public class OverdriveModeHandler implements GameModeHandler {
     @Override
     public OverdriveRuleset getRuleset() { return ruleset; }
 
+    @Override
     public void onPieceSpawned(GameEngine game) {
         if (rollTriggered) return;
         if (level < 1499 && level % 100 != 99)
@@ -52,7 +53,6 @@ public class OverdriveModeHandler implements GameModeHandler {
         checkSectionTransition(); // updateAll is called here on section change
         ruleset.updateARE(level);
         ruleset.updateLockDelay(level);
-        ruleset.are.trigger(false, System.nanoTime());
     }
 
     @Override
@@ -73,18 +73,19 @@ public class OverdriveModeHandler implements GameModeHandler {
                 case 4 -> level = Math.min(level + 6, 1500);
             }
             checkSectionTransition();
-            checkRollTransition(game);
+            checkRollTransition();
         }
 
         ruleset.are.trigger(true, System.nanoTime());
     }
 
-    private void checkRollTransition(GameEngine game) {
+    private void checkRollTransition() {
         if (rollTriggered || level < 1499) return;
         rollTriggered = true;
         rollStartTime = -1;
         timer.pause();
         ruleset.updateAll(1500);
+        ruleset.lockDelay.setLockResetLimit(8);
     }
 
     private void checkRollTimeout(long now, GameEngine game) {
@@ -102,7 +103,7 @@ public class OverdriveModeHandler implements GameModeHandler {
         if ((level >= 1000 && elapsed > TIME_LIMIT_1000) ||
                 (level >= 500  && elapsed > TIME_LIMIT_500)) {
             timeLimitTriggered = true;
-            game.clearGame(); // TODO: confirm method name
+            game.clearGame();
         }
     }
 
@@ -110,6 +111,7 @@ public class OverdriveModeHandler implements GameModeHandler {
     public void update(long now, GameEngine game) {
         checkTimeLimit(game);
         checkRollTimeout(now, game);
+        garbageHandler.update(now, level, game);
     }
 
     private void checkSectionTransition() {
@@ -145,7 +147,10 @@ public class OverdriveModeHandler implements GameModeHandler {
             return 1.0 - (double)(elapsed - (REGRET_DISPLAY_DURATION - 500_000_000L)) / 500_000_000L;
         return 1.0;
     }
-
+    @Override
+    public boolean isDecolorActive() {
+        return level >= 1000;
+    }
     @Override
     public void setPerfectClearFlag(boolean flag) {}
 
@@ -232,6 +237,10 @@ public class OverdriveModeHandler implements GameModeHandler {
             g.restore();
         }
     }
+    @Override
+    public String getDisplayValue() {
+        return gradeHandler.getDisplayGrade();
+    }
 
     ///// DEBUG: REMOVE IF DONE TESTING /////
     public void debugSetLevel(int targetLevel) {
@@ -240,6 +249,7 @@ public class OverdriveModeHandler implements GameModeHandler {
         lastSection = level / 100;
         sectionStartTime = timer.getElapsedSeconds();
         ruleset.updateAll(level);
+        garbageHandler.reset();
     }
 }
 

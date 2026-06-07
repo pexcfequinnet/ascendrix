@@ -5,6 +5,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.*;
+import org.example.ascendrix.MainGame.Engine.GameEngine;
 import org.example.ascendrix.MainGame.Engine.GamePhase;
 import org.example.ascendrix.MainGame.Engine.GameTimer;
 import org.example.ascendrix.GameMode.GameModeHandler;
@@ -137,7 +138,7 @@ public class GameRenderer extends Canvas {
     }
 
     // Render board
-    public void renderBoard(TetrominoType[][] board, BoardRenderContext ctx) {
+    public void renderBoard(TetrominoType[][] board, BoardRenderContext ctx, GameEngine game) {
         int hiddenRows = board.length - VISIBLE_ROWS;
 
         GraphicsContext gc = getGraphicsContext2D();
@@ -148,7 +149,10 @@ public class GameRenderer extends Canvas {
             for (int x = 0; x < COLS; x++) {
                 int screenY = (y - hiddenRows) * TILE + TOP_PANEL;
 
-                if (board[y][x] != null) {
+                if (game.isGarbageCell(y, x)) {
+                    gc.setFill(Color.GRAY);
+                    gc.fillRect(OFFSET_X + x * TILE, screenY, TILE, TILE);
+                } else if (board[y][x] != null) {
                     double alpha = (ctx != null && ctx.alphaProvider != null)
                             ? ctx.alphaProvider.getAlpha(x, y)
                             : 1.0;
@@ -165,13 +169,14 @@ public class GameRenderer extends Canvas {
         }
     }
     // Render current piece
-    public void renderCurrentPiece(TetrominoHandler current) {
+    public void renderCurrentPiece(TetrominoHandler current, GameEngine game) {
         GraphicsContext gc = getGraphicsContext2D();
         if (current != null) {
-            gc.setFill(current.type.color);
+            boolean decolor = game.modeHandler.isDecolorActive();
+            gc.setFill(decolor ? Color.PURPLE : current.type.color);
             for (int[] p : current.getBlocks()) {
-                int screenY = current.y + p[1] - HIDDEN_ROWS; // apply offset
-                if (screenY < 0) continue; // clip pieces still in vanish zone
+                int screenY = current.y + p[1] - HIDDEN_ROWS;
+                if (screenY < 0) continue;
                 int x = OFFSET_X + (current.x + p[0]) * TILE;
                 int y = (screenY) * TILE + TOP_PANEL;
                 gc.fillRect(x, y, TILE, TILE);
@@ -180,13 +185,14 @@ public class GameRenderer extends Canvas {
     }
 
     // Render ghost piece
-    public void renderGhostPiece(TetrominoHandler current, int ghostY) {
+    public void renderGhostPiece(TetrominoHandler current, int ghostY, GameEngine game) {
         if (current == null) return;
         GraphicsContext gc = getGraphicsContext2D();
+        boolean decolor = game.modeHandler.isDecolorActive();
         gc.setGlobalAlpha(0.7);
-        gc.setFill(current.type.color);
+        gc.setFill(decolor ? Color.PURPLE : current.type.color);
         for (int[] p : current.getBlocks()) {
-            int screenY = ghostY + p[1] - HIDDEN_ROWS; // apply offset
+            int screenY = ghostY + p[1] - HIDDEN_ROWS;
             if (screenY < 0) continue;
             int x = OFFSET_X + (current.x + p[0]) * TILE;
             int y = (screenY) * TILE + TOP_PANEL;
@@ -195,7 +201,7 @@ public class GameRenderer extends Canvas {
         gc.setGlobalAlpha(1.0);
     }
     // Render next pieces
-    public void renderNext(List<TetrominoType> preview) {
+    public void renderNext(List<TetrominoType> preview, GameEngine game) {
         GraphicsContext gc = getGraphicsContext2D();
 
         // Fill the full right panel instead of just 100px
@@ -211,7 +217,8 @@ public class GameRenderer extends Canvas {
 
         for (int i = 0; i < preview.size(); i++) {
             TetrominoType type = preview.get(i);
-            gc.setFill(type.color);
+            boolean decolor = game.modeHandler.isDecolorActive();
+            gc.setFill(decolor ? Color.PURPLE : type.color);
             int offsetY = baseY + i * 80;
 
             int minX = Integer.MAX_VALUE;

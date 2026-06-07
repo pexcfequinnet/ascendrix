@@ -111,7 +111,7 @@ public class MarathonModeHandler implements GameModeHandler {
         combo = Math.min(combo + 1, 25);
 
         if (linesCleared >= targetLines) {
-            game.end();
+            game.clearGame();
         }
     }
 
@@ -169,7 +169,7 @@ public class MarathonModeHandler implements GameModeHandler {
             g.fillText("B2B x" + b2bStreak, 195, 230); // Đặt ngay dưới notification
             g.restore();
         }
-// -----------------------------------------------------------------
+        // -----------------------------------------------------------------
         // 2.5. RENDER COMBO COUNTER
         // -----------------------------------------------------------------
         if (combo > 1) {
@@ -253,5 +253,14 @@ public class MarathonModeHandler implements GameModeHandler {
         g.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
         g.fillText(GameTimer.formatTime(time), RIGHT_X, startY + spacing * 4);
         g.restore();
+    }
+    @Override
+    public long getSortValue() {
+        return this.score;
+    }
+
+    @Override
+    public String getDisplayValue() {
+        return String.format("%,d", this.score);
     }
 }
