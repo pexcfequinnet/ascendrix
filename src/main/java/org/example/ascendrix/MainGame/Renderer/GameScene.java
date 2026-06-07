@@ -1,9 +1,15 @@
 package org.example.ascendrix.MainGame.Renderer;
 
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.*;
 import org.example.ascendrix.GameMode.GameMode;
 import org.example.ascendrix.GameMode.GameModeHandler;
 import org.example.ascendrix.GameMode.ModeHandlerFactory;
@@ -16,6 +22,7 @@ import org.example.ascendrix.UI.SceneManager;
 public class GameScene {
 
     private final Scene scene;
+    private boolean isPaused = false;
 
     public GameScene(SceneManager manager, GameMode mode, GameTimer timer) {
         GameRenderer renderer = new GameRenderer();
@@ -28,24 +35,79 @@ public class GameScene {
 
         engine.setInput(input);
 
+
+
+        // ✅ NÂNG CẤP: Độ phân giải chuẩn 1024x768
+        // =================================================================
+        // TẠO GIAO DIỆN LỚP PHỦ PAUSE (OVERLAY)
+        // =================================================================
+        VBox pauseOverlay = new VBox(20);
+        pauseOverlay.setAlignment(Pos.CENTER);
+        pauseOverlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.75);"); // Đen mờ 75%
+        pauseOverlay.setVisible(false); // Ban đầu ẩn đi
+
+        Label pauseLabel = new Label("P A U S E D");
+        pauseLabel.setFont(Font.font("System", FontWeight.BOLD, 50));
+        pauseLabel.setTextFill(Color.WHITE);
+
+        Button resumeBtn = new Button("RESUME");
+        resumeBtn.setFont(Font.font("System", FontWeight.BOLD, 18));
+        resumeBtn.setStyle("-fx-background-color: #42A5F5; -fx-text-fill: white; -fx-cursor: hand;");
+        resumeBtn.setPrefWidth(200);
+
+        Button quitBtn = new Button("QUIT");
+        quitBtn.setFont(Font.font("System", FontWeight.BOLD, 18));
+        quitBtn.setStyle("-fx-background-color: #EF5350; -fx-text-fill: white; -fx-cursor: hand;");
+        quitBtn.setPrefWidth(200);
+
+        pauseOverlay.getChildren().addAll(pauseLabel, resumeBtn, quitBtn);
+
         // Đặt GameRenderer vào giữa màn hình
-        StackPane root = new StackPane(renderer);
+        StackPane root = new StackPane(renderer, pauseOverlay);
 
         // Cập nhật phông nền tối đồng bộ với tổng thể game
         root.setStyle("-fx-background-color: #1A1A1A;");
 
-        // ✅ NÂNG CẤP: Độ phân giải chuẩn 1024x768
         scene = new Scene(root, 1024, 768);
-
         input.attach(scene);
 
-        // Xử lý các phím tắt quản lý Scene (ESC và ENTER)
-        scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+        // Xử lý sự kiện bấm nút trên Pause Menu
+        resumeBtn.setOnAction(e -> {
+            isPaused = false;
+            pauseOverlay.setVisible(false);
+            engine.resume(); // Trở lại game
+            root.requestFocus(); // Trả lại focus cho Scene để tiếp tục nhận phím di chuyển
+        });
 
-            // 1. Phím ESC: Thoát game giữa chừng và về Menu
+        quitBtn.setOnAction(e -> {
+            engine.stop();
+            manager.showMenu();
+        });
+
+        // =================================================================
+        // XỬ LÝ SỰ KIỆN BÀN PHÍM
+        // =================================================================
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+
+            // 1. Phím ESC: Bật / Tắt Pause
             if (e.getCode() == KeyCode.ESCAPE) {
-                engine.stop();
-                manager.showMenu();
+
+                if (engine.isGameOver() || engine.isCleared()) return;
+
+                isPaused = !isPaused;
+                if (isPaused) {
+                    engine.pause(); // Đổi state trong Engine
+                    pauseOverlay.setVisible(true);
+
+                    // 🔥 THÊM DÒNG NÀY: Ép Menu nổi lên layer trên cùng của màn hình
+                    pauseOverlay.toFront();
+
+                } else {
+                    pauseOverlay.setVisible(false);
+                    engine.resume();
+                }
+                e.consume();
+                return;
             }
 
             // 2. Phím ENTER: Xác nhận kết thúc Game và tính điểm
@@ -54,19 +116,13 @@ public class GameScene {
                 boolean isClear = engine.isCleared();
 
                 if (isOver || isClear) {
-                    e.consume(); // Nuốt phím ENTER, không cho lọt sang màn sau
+                    e.consume();
                     engine.stop();
 
-                    // 🔥 LOGIC CHẶN SPRINT TẠI ĐÂY
-                    // Nếu đang chơi SPRINT mà KHÔNG PHẢI là Clear (tức là Top Out)
                     if (mode.name().equals("SPRINT") && !isClear) {
-                        System.out.println("Sprint Failed! Quay về Menu.");
-                        manager.showMenu(); // Hoặc manager.setScene(new MenuScene(...))
+                        manager.showMenu();
                     }
                     else {
-                        // Các trường hợp hợp lệ:
-                        // - Clear Sprint
-                        // - Marathon / Master / Overdrive (Top Out hay Clear đều có điểm để lưu)
                         String displayVal = modeHandler.getDisplayValue();
                         long sortVal = modeHandler.getSortValue();
 
@@ -79,6 +135,7 @@ public class GameScene {
         // Bắt đầu vòng lặp game
         engine.start();
     }
+
 
     public Scene getScene() {
         return scene;

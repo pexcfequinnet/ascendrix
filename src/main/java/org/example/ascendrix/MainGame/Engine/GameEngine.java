@@ -96,11 +96,18 @@ public class GameEngine {
     }
     public void start() {
         phase = GamePhase.COUNTDOWN;
+        state = GameState.RUNNING; // Khởi tạo state ban đầu
         lastTick = System.nanoTime();
 
         gameLoop = new AnimationTimer() {
             @Override
             public void handle(long now) {
+                if (state == GameState.PAUSED) {
+                    lastUpdate = now;
+                    lastTick = now;
+                    return;
+                }
+
                 if (phase == GamePhase.COUNTDOWN) updateCountdown(now);
                 if (phase == GamePhase.PLAYING) update(now);
                 render(now);
@@ -111,13 +118,20 @@ public class GameEngine {
     }
 
     public void stop() {
-        // 3. GỌI BIẾN RA ĐỂ DỪNG
         if (gameLoop != null) {
             gameLoop.stop();
         }
     }
 
+    public void pause() {
+        state = GameState.PAUSED;
+        if (timer != null) timer.pause(); // Dừng đồng hồ đếm
+    }
 
+    public void resume() {
+        state = GameState.RUNNING;
+        if (timer != null) timer.resume(); // Chạy lại đồng hồ đếm
+    }
     // Rendering function: Initialize the game
     private void render(long now) {
         renderer.renderBoard(board, modeHandler.getBoardContext(board), this);
@@ -608,4 +622,6 @@ public class GameEngine {
     public boolean isCleared() {
         return phase ==  GamePhase.CLEARED;
     }
+
+
 }

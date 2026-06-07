@@ -19,6 +19,13 @@ public class GameTimer {
         }
     }
 
+    public void resume() {
+        if (!running) {
+            startTime = System.currentTimeMillis();
+            running = true;
+        }
+    }
+
     public void reset() {
         startTime = -1;
         accumulated = 0;
@@ -46,4 +53,5 @@ public class GameTimer {
 
         return String.format("%02d:%02d.%02d", minutes, seconds, centiseconds);
     }
+
 }
