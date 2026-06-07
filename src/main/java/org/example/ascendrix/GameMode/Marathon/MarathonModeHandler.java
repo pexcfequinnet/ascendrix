@@ -123,34 +123,109 @@ public class MarathonModeHandler implements GameModeHandler {
     @Override
     public void renderHUD(GraphicsContext g, GameTimer timer, long now) {
         // -----------------------------------------------------------------
-        // 1. RENDER ACTION NOTIFICATIONS (Spins & Clears)
+        // CÁC TRỤC TỌA ĐỘ VÀNG (Chuẩn màn hình 1024x768)
+        // -----------------------------------------------------------------
+        final int BOARD_CENTER_X = 512; // Tâm tuyệt đối của bảng game
+        final int RIGHT_X = 750;        // Neo lề trái cho Panel phải
+
+        // Căn chỉnh 2 cột hoàn hảo cho Panel trái
+        final int LEFT_LABEL_X = 100;   // Mép trái của các nhãn (Level, Lines...)
+        final int LEFT_VALUE_X = 310;   // Mép phải của các con số giá trị
+
+        int statsY = 550;
+        int spacing = 38; // Nới rộng khoảng cách dòng cho thoáng mắt
+
+        // -----------------------------------------------------------------
+        // 1. MARATHON STATS - BẢNG ĐIỂM HAI CỘT (ĐÃ PHÓNG TO CHỮ)
+        // -----------------------------------------------------------------
+        g.save();
+        // Tiêu đề to hẳn lên cỡ 28
+        g.setTextAlign(TextAlignment.RIGHT);
+        g.setFill(Color.CYAN);
+        g.setFont(Font.font("System", FontWeight.BOLD, 28));
+        g.fillText("MARATHON", LEFT_VALUE_X, statsY);
+
+        // Các thông số tăng từ 18 lên cỡ 22 cho rõ nét
+        g.setFont(Font.font("Consolas", FontWeight.BOLD, 22));
+
+        // --- Hàng 1: Level ---
+        g.setTextAlign(TextAlignment.LEFT);
+        g.setFill(Color.LIGHTGRAY);
+        g.fillText("Level:", LEFT_LABEL_X, statsY + spacing * 1.5);
+
+        g.setTextAlign(TextAlignment.RIGHT);
+        g.setFill(Color.WHITE);
+        g.fillText(String.valueOf(level), LEFT_VALUE_X, statsY + spacing * 1.5);
+
+        // --- Hàng 2: Lines ---
+        g.setTextAlign(TextAlignment.LEFT);
+        g.setFill(Color.LIGHTGRAY);
+        g.fillText("Lines:", LEFT_LABEL_X, statsY + spacing * 2.5);
+
+        g.setTextAlign(TextAlignment.RIGHT);
+        g.setFill(Color.WHITE);
+        g.fillText(linesCleared + " / " + targetLines, LEFT_VALUE_X, statsY + spacing * 2.5);
+
+        // --- Hàng 3: Score ---
+        g.setTextAlign(TextAlignment.LEFT);
+        g.setFill(Color.LIGHTGRAY);
+        g.fillText("Score:", LEFT_LABEL_X, statsY + spacing * 3.5);
+
+        g.setTextAlign(TextAlignment.RIGHT);
+        g.setFill(Color.GOLD);
+        g.fillText(String.valueOf(score), LEFT_VALUE_X, statsY + spacing * 3.5);
+        g.restore();
+
+        // -----------------------------------------------------------------
+        // 2. TIME - ĐỐI XỨNG HÌNH HỌC VỚI BÊN TRÁI
+        // -----------------------------------------------------------------
+        g.save();
+        long time = (timer != null) ? timer.getElapsedMs() : 0;
+
+        g.setTextAlign(TextAlignment.LEFT);
+        g.setFill(Color.LIGHTGRAY);
+        g.setFont(Font.font("System", FontWeight.BOLD, 20));
+        g.fillText("TIME", RIGHT_X, statsY + spacing * 1.5);
+
+        g.setFill(Color.WHITE);
+        g.setFont(Font.font("Consolas", FontWeight.BOLD, 32));
+        g.fillText(GameTimer.formatTime(time), RIGHT_X, statsY + spacing * 2.5 + 10);
+        g.restore();
+
+
+        // =================================================================
+        // KHU VỰC HIỆN THỊ TRÊN BOARD (CHỈ XUẤT HIỆN KHI CÓ EVENT)
+        // =================================================================
+
+        // -----------------------------------------------------------------
+        // 3. ACTION NOTIFICATIONS - (1/3 Phía trên bảng game)
         // -----------------------------------------------------------------
         if (hud.shouldDisplay(now)) {
             g.save();
             double alpha = hud.getAlpha(now);
             g.setGlobalAlpha(alpha);
 
-            double noticeW = 160;
-            double noticeH = 40;
-            double noticeX = 250 + (300 - noticeW) / 2; // = 320
+            double noticeW = 180;
+            double noticeH = 42;
+            double noticeX = BOARD_CENTER_X - (noticeW / 2);
             double noticeY = 180;
 
             g.setFill(Color.color(0, 0, 0, 0.75));
-            g.fillRoundRect(noticeX, noticeY, noticeW, noticeH, 10, 10);
-            g.setStroke(Color.ORANGE);
+            g.fillRoundRect(noticeX, noticeY, noticeW, noticeH, 8, 8);
+            g.setStroke(Color.GOLD);
             g.setLineWidth(1.5);
-            g.strokeRoundRect(noticeX, noticeY, noticeW, noticeH, 10, 10);
+            g.strokeRoundRect(noticeX, noticeY, noticeW, noticeH, 8, 8);
 
             g.setFill(Color.GOLD);
-            g.setFont(Font.font("System", FontWeight.BOLD, 16));
+            g.setFont(Font.font("System", FontWeight.BOLD, 18));
             g.setTextAlign(TextAlignment.CENTER);
             g.setTextBaseline(VPos.CENTER);
-            g.fillText(hud.getClearText(), noticeX + noticeW / 2, noticeY + noticeH / 2);
+            g.fillText(hud.getClearText(), BOARD_CENTER_X, noticeY + noticeH / 2);
             g.restore();
         }
 
         // -----------------------------------------------------------------
-        // 2. RENDER BACK-TO-BACK (B2B) STREAK
+        // 4. BACK-TO-BACK STREAK - (Cận đáy bảng game)
         // -----------------------------------------------------------------
         if (b2bActive && b2bStreak > 0) {
             g.save();
@@ -163,19 +238,24 @@ public class MarathonModeHandler implements GameModeHandler {
                 default -> Color.SILVER;
             };
 
-            g.setFill(b2bColor);
-            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 18));
+            double b2bY = 630;
             g.setTextAlign(TextAlignment.CENTER);
-            g.fillText("B2B x" + b2bStreak, 195, 230); // Đặt ngay dưới notification
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 22));
+
+            g.setStroke(Color.BLACK);
+            g.setLineWidth(4.0);
+            g.strokeText("B2B x" + b2bStreak, BOARD_CENTER_X, b2bY);
+
+            g.setFill(b2bColor);
+            g.fillText("B2B x" + b2bStreak, BOARD_CENTER_X, b2bY);
             g.restore();
         }
+
         // -----------------------------------------------------------------
-        // 2.5. RENDER COMBO COUNTER
+        // 5. COMBO COUNTER - (Sát đáy bảng game)
         // -----------------------------------------------------------------
         if (combo > 1) {
             g.save();
-
-            // Hiệu ứng đổi màu: Combo càng cao màu càng cháy
             Color comboColor = switch (combo) {
                 case 1, 2 -> Color.YELLOW;
                 case 3, 4 -> Color.ORANGE;
@@ -184,75 +264,18 @@ public class MarathonModeHandler implements GameModeHandler {
                 default -> Color.CYAN;
             };
 
-            double comboX = 195;
-            double comboY = 255;
-
+            double comboY = 675;
             g.setTextAlign(TextAlignment.CENTER);
-            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 18)); // Size 18 bằng chuẩn với B2B
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 24));
 
-            // Vẽ đổ bóng (Shadow)
-            g.setFill(Color.color(0, 0, 0, 0.6));
-            g.fillText(combo + " COMBO", comboX + 2, comboY + 2);
+            g.setStroke(Color.BLACK);
+            g.setLineWidth(4.0);
+            g.strokeText(combo + " COMBO", BOARD_CENTER_X, comboY);
 
-            // Vẽ chữ chính
             g.setFill(comboColor);
-            g.fillText(combo + " COMBO", comboX, comboY);
-
+            g.fillText(combo + " COMBO", BOARD_CENTER_X, comboY);
             g.restore();
         }
-        // -----------------------------------------------------------------
-        // 3. RENDER MARATHON STATS
-        // -----------------------------------------------------------------
-        g.save();
-        final int LEFT_X = 240;
-        int startY = 380;
-        int spacing = 25;
-
-        g.setTextAlign(TextAlignment.RIGHT);
-
-        // Tên chế độ
-        g.setFill(Color.CYAN);
-        g.setFont(Font.font("System", FontWeight.BOLD, 18));
-        g.fillText("MARATHON", LEFT_X, startY);
-        g.setFill(Color.GRAY);
-        g.setFont(Font.font("System", FontWeight.NORMAL, 12));
-        g.fillText("(150 Lines)", LEFT_X, startY + 15);
-
-        // Các thông số Level, Lines, Score
-        g.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
-
-        g.setFill(Color.LIGHTGRAY);
-        g.fillText("Level: ", LEFT_X - 50, startY + spacing * 2);
-        g.setFill(Color.WHITE);
-        g.fillText(String.valueOf(level), LEFT_X, startY + spacing * 2);
-
-        g.setFill(Color.LIGHTGRAY);
-        g.fillText("Lines: ", LEFT_X - 80, startY + spacing * 3);
-        g.setFill(Color.WHITE);
-        g.fillText(linesCleared + " / " + targetLines, LEFT_X, startY + spacing * 3);
-
-        g.setFill(Color.LIGHTGRAY);
-        g.fillText("Score: ", LEFT_X - 80, startY + spacing * 4);
-        g.setFill(Color.GOLD);
-        g.fillText(String.valueOf(score), LEFT_X, startY + spacing * 4);
-        g.restore();
-
-        // -----------------------------------------------------------------
-        // 4. RENDER TIME
-        // -----------------------------------------------------------------
-        g.save();
-        final int RIGHT_X = 560;
-        long time = (timer != null) ? timer.getElapsedMs() : 0; // Check null an toàn
-
-        g.setTextAlign(TextAlignment.LEFT);
-        g.setFill(Color.LIGHTGRAY);
-        g.setFont(Font.font("System", FontWeight.BOLD, 14));
-        g.fillText("TIME", RIGHT_X, startY + spacing * 3);
-
-        g.setFill(Color.WHITE);
-        g.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
-        g.fillText(GameTimer.formatTime(time), RIGHT_X, startY + spacing * 4);
-        g.restore();
     }
     @Override
     public long getSortValue() {

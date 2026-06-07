@@ -5,6 +5,7 @@ module org.example.ascendrix {
     requires com.almasb.fxgl.all;
     requires javafx.graphics;
     requires com.google.gson;
+    requires com.fasterxml.jackson.annotation;
     opens org.example.ascendrix.GameData to com.google.gson;
     opens org.example.ascendrix to javafx.fxml;
     exports org.example.ascendrix;

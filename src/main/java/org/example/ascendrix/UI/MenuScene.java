@@ -3,6 +3,8 @@ package org.example.ascendrix.UI;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import org.example.ascendrix.GameMode.GameMode;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -10,7 +12,6 @@ import javafx.scene.control.Label;
 public class MenuScene {
 
     private final Scene scene;
-
     public MenuScene(SceneManager manager) {
 
         // 1. ASCII Art "Ascendrix" (Sử dụng font Slant)
@@ -50,36 +51,61 @@ public class MenuScene {
         Button marathonBtn = new Button("MARATHON");
         Button masterBtn = new Button("MASTER");
         Button overdriveBtn = new Button("OVERDRIVE");
+        Button btnOptions = new Button("SETTINGS");
 
         sprintBtn.setOnAction(e -> manager.setScene(new ModeDetailScene(manager, GameMode.SPRINT).scene));
         marathonBtn.setOnAction(e -> manager.setScene(new ModeDetailScene(manager, GameMode.MARATHON).scene));
         masterBtn.setOnAction(e -> manager.setScene(new ModeDetailScene(manager, GameMode.MASTER).scene));
         overdriveBtn.setOnAction(e -> manager.setScene(new ModeDetailScene(manager, GameMode.OVERDRIVE).scene));
 
+        btnOptions.setFont(Font.font("System", FontWeight.BOLD, 16));
+        btnOptions.setStyle("-fx-background-color: #333333; -fx-text-fill: white; -fx-cursor: hand;");
+        btnOptions.setMaxWidth(200); // Thao tác chỉnh size cho đều với các nút khác của bạn
+
         // 3. Áp dụng màu sắc riêng cho từng Mode
         // Cú pháp: styleButton(nút, "màu nền", "màu khi di chuột vào");
 
-        // SPRINT: Giữ màu xám đen trung tính
-        styleButton(sprintBtn, "#333333", "#555555");
+        // SPRINT:
+        styleButton(sprintBtn, "#00c8c8", "#00e1e1");
 
-        // MARATHON: Xanh lá nhạt (Soft Green)
+        // MARATHON:
         styleButton(marathonBtn, "#66BB6A", "#81C784");
 
-        // MASTER: Xanh dương nhạt (Soft Blue)
+        // MASTER:
         styleButton(masterBtn, "#42A5F5", "#64B5F6");
 
-        // OVERDRIVE: Đỏ nhạt (Soft Red - Giảm gắt so với bản cũ)
+        // OVERDRIVE:
         styleButton(overdriveBtn, "#EF5350", "#E57373");
 
+        //SETTINGS:
+        styleButton(btnOptions, "#424242", "#616161");
+
+        btnOptions.setOnAction(e -> {
+            var inputHandler = manager.getInputHandler();
+            Scene currentMenuScene = btnOptions.getScene();
+
+            KeyConfigMenu configMenu = new KeyConfigMenu(inputHandler, () -> manager.setScene(currentMenuScene));
+
+            Scene optionsScene = new Scene(configMenu, 1024, 768);
+
+            optionsScene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, keyEvent -> {
+                // Chỉ khi đang ở trạng thái chờ gõ phím mới chặn, tránh ảnh hưởng chức năng khác
+                if (configMenu.isListening()) {
+                    configMenu.handleSceneKeyEvent(keyEvent);
+                }
+            });
+
+            manager.setScene(optionsScene);
+        });
+
         // 4. Bố cục VBox
-        VBox root = new VBox(15, titleLabel, sprintBtn, marathonBtn, masterBtn, overdriveBtn);
+        VBox root = new VBox(15, titleLabel, sprintBtn, marathonBtn, masterBtn, overdriveBtn, btnOptions);
         root.setStyle("-fx-background-color: #1A1A1A; -fx-padding: 30;");
         root.setAlignment(Pos.CENTER);
 
-        scene = new Scene(root, 850, 600);
+        scene = new Scene(root, 1024, 768);
     }
 
-    // Hàm Helper giúp set CSS cho Button nhanh gọn hơn
     private void styleButton(Button btn, String bgColor, String hoverColor) {
         String baseStyle =
                 "-fx-font-size: 16px; " +

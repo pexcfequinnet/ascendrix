@@ -12,6 +12,9 @@ public class ScoreManager {
     private static final String FILE_PATH = "GameData/ScoreData/scores.json";
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create(); // PrettyPrint để file JSON đẹp, dễ đọc
 
+    // ✅ THÊM: Hằng số quy định số lượng kỷ lục tối đa trên bảng xếp hạng
+    private static final int MAX_SCORES = 10;
+
     // Map chứa điểm của tất cả các Mode
     private Map<String, List<ScoreRecord>> allScores;
 
@@ -45,19 +48,17 @@ public class ScoreManager {
                 parentDir.mkdirs();
             }
 
-            if (parentDir != null && !parentDir.exists()) {
-                parentDir.mkdirs();
-            }
+            // ✅ SỬA: Đã xóa đoạn parentDir.mkdirs() bị lặp thừa thứ 2
+
             try (Writer writer = new FileWriter(FILE_PATH)) {
                 gson.toJson(allScores, writer);
             }
-        }
-        catch (IOException e) {
-        e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    // 3. Thêm điểm mới và sắp xếp lại Top 5
+    // 3. Thêm điểm mới và sắp xếp lại Top
     public void addScore(String modeStr, String playerName, long sortValue, String displayValue) {
         // 1. Lấy danh sách điểm của Mode hiện tại (Nếu chưa có thì tạo list mới)
         List<ScoreRecord> modeScores = allScores.computeIfAbsent(modeStr, k -> new ArrayList<>());
@@ -74,9 +75,9 @@ public class ScoreManager {
             modeScores.sort((a, b) -> Long.compare(b.getSortValue(), a.getSortValue()));
         }
 
-        // 4. Cắt tỉa danh sách: Chỉ vinh danh Top 5
-        if (modeScores.size() > 5) {
-            modeScores.subList(5, modeScores.size()).clear();
+        // 4. ✅ SỬA: Cắt tỉa danh sách dựa trên hằng số MAX_SCORES (Top 10)
+        if (modeScores.size() > MAX_SCORES) {
+            modeScores.subList(MAX_SCORES, modeScores.size()).clear();
         }
 
         // 5. Ghi thẳng xuống file JSON để lưu trữ vĩnh viễn
@@ -87,5 +88,4 @@ public class ScoreManager {
     public List<ScoreRecord> getTopScores(String modeStr) {
         return allScores.getOrDefault(modeStr, new ArrayList<>());
     }
-
 }

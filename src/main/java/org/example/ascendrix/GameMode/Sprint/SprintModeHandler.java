@@ -53,23 +53,31 @@ public class SprintModeHandler implements GameModeHandler {
         hud.showClear(spin, lines, System.nanoTime());
     }
 
-    @Override
     public void renderHUD(GraphicsContext g, GameTimer timer, long now) {
+        // Tâm của Panel Trái (Rộng 342px) -> Center = 171
+        final int LEFT_CENTER_X = 171;
+
         // -----------------------------------------------------------------
-        // 1. RENDER ACTION NOTIFICATIONS
+        // 1. RENDER ACTION NOTIFICATIONS (VD: TETRIS, T-SPIN...)
         // -----------------------------------------------------------------
         g.save();
         if (hud.shouldDisplay(now)) {
             double alpha = hud.getAlpha(now);
             g.setGlobalAlpha(alpha);
 
+            // Hộp thông báo đặt dưới chữ HOLD (Hold ở y=100)
+            int boxWidth = 140; // Rộng hơn một chút để chứa chữ thoải mái
+            int boxHeight = 50;
+            int boxX = LEFT_CENTER_X - (boxWidth / 2); // Căn giữa hộp vào Panel trái
+            int boxY = 280;
+
             g.setFill(Color.color(0, 0, 0, 0.75));
-            g.fillRoundRect(140, 150, 110, 50, 10, 10);
+            g.fillRoundRect(boxX, boxY, boxWidth, boxHeight, 10, 10);
 
             g.setFill(Color.ORANGE);
-            g.setFont(Font.font("System", FontWeight.BOLD, 16));
+            g.setFont(Font.font("System", FontWeight.BOLD, 18)); // Font to lên 18
             g.setTextAlign(TextAlignment.CENTER);
-            g.fillText(hud.getClearText(), 195, 180);
+            g.fillText(hud.getClearText(), LEFT_CENTER_X, boxY + 32);
         }
         g.restore();
 
@@ -79,58 +87,62 @@ public class SprintModeHandler implements GameModeHandler {
         if (b2bActive && b2bStreak > 0) {
             g.save();
             g.setFill(Color.YELLOW);
-            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 18));
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 20)); // Font to lên 20
             g.setTextAlign(TextAlignment.CENTER);
-            g.fillText("B2B x" + b2bStreak, 195, 230);
+            // Đặt ngay dưới hộp thông báo
+            g.fillText("B2B x" + b2bStreak, LEFT_CENTER_X, 360);
             g.restore();
         }
 
-
         // -----------------------------------------------------------------
-        // 3. RENDER SPRINT STATS
+        // 3. RENDER SPRINT STATS (Bên trái, dưới B2B)
         // -----------------------------------------------------------------
         g.save();
-        final int LEFT_X = 240;
-        int startY = 400;
-        int spacing = 30;
+        // Neo vào lề sát với bảng Game (Bảng game bắt đầu ở x=342)
+        final int STATS_ANCHOR_X = 300;
+        int startY = 600; // Đẩy sâu xuống dưới
+        int spacing = 35; // Nới lỏng khoảng cách dòng
 
         g.setTextAlign(TextAlignment.RIGHT);
 
         g.setFill(Color.LIGHTGREEN);
-        g.setFont(Font.font("System", FontWeight.BOLD, 22));
-        g.fillText("SPRINT", LEFT_X, startY);
+        g.setFont(Font.font("System", FontWeight.BOLD, 26)); // To ra 26
+        g.fillText("SPRINT", STATS_ANCHOR_X, startY);
 
         g.setFill(Color.LIGHTGRAY);
-        g.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
-        g.fillText("Lines: ", LEFT_X - 80, startY + spacing);
+        g.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
+        g.fillText("Lines: ", STATS_ANCHOR_X - 100, startY + spacing);
 
         g.setFill(Color.WHITE);
-        g.fillText(linesCleared + " / " + targetLines, LEFT_X, startY + spacing);
+        g.fillText(linesCleared + " / " + targetLines, STATS_ANCHOR_X, startY + spacing);
 
+        // Thanh tiến trình (Progress bar)
         double progress = Math.min(1.0, (double) linesCleared / targetLines);
-        int barWidth = 120;
+        int barWidth = 160; // Dài ra 160px cho đẹp
         g.setFill(Color.rgb(40, 40, 40));
-        g.fillRoundRect(LEFT_X - barWidth, startY + spacing + 10, barWidth, 6, 3, 3);
+        g.fillRoundRect(STATS_ANCHOR_X - barWidth, startY + spacing + 15, barWidth, 8, 4, 4);
         if (progress > 0) {
             g.setFill(Color.LIGHTGREEN);
-            g.fillRoundRect(LEFT_X - barWidth, startY + spacing + 10, barWidth * progress, 6, 3, 3);
+            g.fillRoundRect(STATS_ANCHOR_X - barWidth, startY + spacing + 15, barWidth * progress, 8, 4, 4);
         }
         g.restore();
 
         // -----------------------------------------------------------------
-        // 4. RENDER SPRINT TIMER
+        // 4. RENDER SPRINT TIMER (Bên phải)
         // -----------------------------------------------------------------
         g.save();
-        final int RIGHT_X = 560;
+        // Bảng game kết thúc ở x=682, cách ra một chút thì x=750 là đẹp
+        final int RIGHT_X = 750;
         long time = (timer != null) ? timer.getElapsedMs() : 0;
+
         g.setTextAlign(TextAlignment.LEFT);
         g.setFill(Color.LIGHTGRAY);
-        g.setFont(Font.font("System", FontWeight.BOLD, 16));
-        g.fillText("TIME", RIGHT_X, startY);
+        g.setFont(Font.font("System", FontWeight.BOLD, 22)); // Chữ "TIME" to ra 22
+        g.fillText("TIME", RIGHT_X, startY); // Cùng độ cao (Y) với chữ "SPRINT" bên kia
 
         g.setFill(Color.WHITE);
-        g.setFont(Font.font("Monospace", FontWeight.BOLD, 28)); // Đổi cỡ chữ lên 28
-        g.fillText(GameTimer.formatTime(time), RIGHT_X, startY + spacing + 5);
+        g.setFont(Font.font("Monospace", FontWeight.BOLD, 36)); // Đồng hồ siêu to 36
+        g.fillText(GameTimer.formatTime(time), RIGHT_X, startY + spacing + 10);
         g.restore();
     }
     @Override

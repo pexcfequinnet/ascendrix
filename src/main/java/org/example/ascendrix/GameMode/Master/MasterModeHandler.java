@@ -264,25 +264,77 @@ public class MasterModeHandler implements GameModeHandler {
     @Override
     public void renderHUD(GraphicsContext g, GameTimer activeTimer, long now) {
         // -----------------------------------------------------------------
-        // RENDER SPIN / LINE CLEAR NOTIFICATION
+        // TỌA ĐỘ VÀNG (Chuẩn 1024x768)
         // -----------------------------------------------------------------
-        g.save();
+        final int BOARD_X = 342;           // Điểm bắt đầu của bảng game bên trái
+        final int BOARD_CENTER_X = 512;    // Tâm bảng
+        final int BOARD_BOTTOM_Y = 724;    // Đáy bảng (cho các event Cool/Regret)
+
+        // Đẩy HUD sát vào bảng: Cạnh trái bảng là 342. Đặt HUD X ở 140, rộng 180 => Kết thúc ở 320 (cách bảng 22px).
+        final int HUD_X = 140;
+        final int BAR_WIDTH = 180;
+        final int LEFT_CENTER_X = HUD_X + (BAR_WIDTH / 2); // Trục căn giữa của Panel trái (X = 230)
+
+        // =================================================================
+        // NỬA TRÊN PANEL TRÁI: ACTION & COMBO (TỐI GIẢN)
+        // =================================================================
+
+        // -----------------------------------------------------------------
+        // RENDER ACTION NOTIFICATIONS (Đưa ra khỏi bảng, chỉ giữ lại chữ)
+        // -----------------------------------------------------------------
         if (hud.shouldDisplay(now)) {
+            g.save();
             double alpha = hud.getAlpha(now);
             g.setGlobalAlpha(alpha);
 
-            g.setFill(Color.color(0, 0, 0, 0.75));
-            g.fillRoundRect(140, 150, 110, 50, 10, 10);
-
-            g.setFill(Color.ORANGE);
-            g.setFont(Font.font("System", FontWeight.BOLD, 16));
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 22));
             g.setTextAlign(TextAlignment.CENTER);
-            g.fillText(hud.getClearText(), 195, 180);
-        }
-        g.restore();
-        final int HUD_X = 30;
-        final int BAR_WIDTH = 180;
+            g.setTextBaseline(VPos.CENTER);
 
+            // Đơn giản hóa: Bỏ fillRoundRect, chỉ dùng strokeText để chữ nổi lên
+            g.setStroke(Color.BLACK);
+            g.setLineWidth(4.0);
+            g.strokeText(hud.getClearText(), LEFT_CENTER_X, 200);
+
+            g.setFill(Color.GOLD);
+            g.fillText(hud.getClearText(), LEFT_CENTER_X, 200);
+            g.restore();
+        }
+
+        // -----------------------------------------------------------------
+        // RENDER COMBO COUNTER (Ngay dưới Action)
+        // -----------------------------------------------------------------
+        if (gradeHandler.combo > 2) {
+            g.save();
+            Color comboColor = switch (gradeHandler.combo) {
+                case 1, 2 -> Color.YELLOW;
+                case 3, 4 -> Color.ORANGE;
+                case 5, 6 -> Color.RED;
+                case 7, 8, 9 -> Color.PURPLE;
+                default -> Color.CYAN;
+            };
+
+            g.setTextAlign(TextAlignment.CENTER);
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 20));
+
+            g.setStroke(Color.BLACK);
+            g.setLineWidth(3.0);
+            g.strokeText(gradeHandler.combo + " COMBO", LEFT_CENTER_X, 240);
+
+            g.setFill(comboColor);
+            g.fillText(gradeHandler.combo + " COMBO", LEFT_CENTER_X, 240);
+            g.restore();
+        }
+
+        // =================================================================
+        // NỬA DƯỚI PANEL TRÁI: THỐNG KÊ (Nằm sát chân bảng trái)
+        // =================================================================
+
+        int statsStartY = 450; // Hạ thấp trọng tâm cụm HUD xuống nửa dưới
+
+        // -----------------------------------------------------------------
+        // RENDER TIME
+        // -----------------------------------------------------------------
         if (activeTimer != null) {
             this.timer = activeTimer;
         }
@@ -292,44 +344,13 @@ public class MasterModeHandler implements GameModeHandler {
         g.save();
         g.setFill(Color.LIGHTGRAY);
         g.setFont(Font.font("Monospace", FontWeight.BOLD, 14));
-        g.fillText("TIME", HUD_X, 150);
+        g.fillText("TIME", HUD_X, statsStartY);
 
         g.setFill(Color.WHITE);
         g.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
-        g.fillText(timeStr, HUD_X, 175);
+        g.fillText(timeStr, HUD_X, statsStartY + 25);
         g.restore();
-        // -----------------------------------------------------------------
-        // 2.5. RENDER COMBO COUNTER
-        // -----------------------------------------------------------------
-        if (gradeHandler.combo > 2) {
-            g.save();
 
-            // Hiệu ứng đổi màu: Combo càng cao màu càng cháy
-            Color comboColor = switch (gradeHandler.combo) {
-                case 1, 2 -> Color.YELLOW;
-                case 3, 4 -> Color.ORANGE;
-                case 5, 6 -> Color.RED;
-                case 7, 8, 9 -> Color.PURPLE;
-                default -> Color.CYAN;
-            };
-
-            // Canh ngay dưới B2B (B2B Y = 230, cộng thêm 25 pixel khoảng cách)
-            double comboX = 195;
-            double comboY = 375;
-
-            g.setTextAlign(TextAlignment.CENTER);
-            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 18)); // Size 18 bằng chuẩn với B2B
-
-            // Vẽ đổ bóng (Shadow)
-            g.setFill(Color.color(0, 0, 0, 0.6));
-            g.fillText(gradeHandler.combo + " COMBO", comboX + 2, comboY + 2);
-
-            // Vẽ chữ chính
-            g.setFill(comboColor);
-            g.fillText(gradeHandler.combo + " COMBO", comboX, comboY);
-
-            g.restore();
-        }
         // -----------------------------------------------------------------
         // RENDER LEVEL PROGRESS
         // -----------------------------------------------------------------
@@ -337,82 +358,83 @@ public class MasterModeHandler implements GameModeHandler {
         int displayLevel = Math.min(level, 999);
         int sectionStart = (displayLevel / 100) * 100;
         int sectionEnd = Math.min(sectionStart + 100, 999);
-
         double sectionPercent = (displayLevel == 999) ? 1.0 : (double) (displayLevel - sectionStart) / 100.0;
 
+        int levelY = statsStartY + 85;
+
         g.setFill(Color.LIGHTGRAY);
-        g.setFont(Font.font("System", FontWeight.BOLD, 12));
-        g.fillText("LEVEL", HUD_X, 220);
+        g.setFont(Font.font("System", FontWeight.BOLD, 14));
+        g.fillText("LEVEL", HUD_X, levelY);
 
         g.setFill(Color.WHITE);
-        g.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
-        g.fillText(String.format("%03d", displayLevel), HUD_X, 245);
+        g.setFont(Font.font("Consolas", FontWeight.BOLD, 22));
+        g.fillText(String.format("%03d", displayLevel), HUD_X, levelY + 25);
         g.setFill(Color.GRAY);
-        g.setFont(Font.font("Monospace", FontWeight.NORMAL, 14));
-        g.fillText(" / " + sectionEnd, HUD_X + 40, 245);
+        g.setFont(Font.font("Consolas", FontWeight.NORMAL, 16));
+        g.fillText(" / " + sectionEnd, HUD_X + 45, levelY + 25);
 
         g.setFill(Color.rgb(40, 40, 40));
-        g.fillRoundRect(HUD_X, 255, BAR_WIDTH, 8, 4, 4); // Background track
+        g.fillRoundRect(HUD_X, levelY + 35, BAR_WIDTH, 8, 4, 4); // Background track
         if (sectionPercent > 0) {
             g.setFill(masterRollPhase != MasterRollPhase.NORMAL ? Color.PURPLE : Color.CYAN);
-            g.fillRoundRect(HUD_X, 255, BAR_WIDTH * sectionPercent, 8, 4, 4);
+            g.fillRoundRect(HUD_X, levelY + 35, BAR_WIDTH * sectionPercent, 8, 4, 4);
         }
         g.restore();
 
         // -----------------------------------------------------------------
         // RENDER GRADE & INTERNAL PROGRESS
         // -----------------------------------------------------------------
-
+        g.save();
         String letterGrade = gradeHandler.getCurrentGrade().label;
         double progress = Math.clamp(gradeHandler.getProgressToNextGrade(), 0.0, 1.0);
 
+        int gradeY = levelY + 85;
+
         g.setFill(Color.LIGHTGRAY);
-        g.setFont(Font.font("System", FontWeight.BOLD, 12));
-        g.fillText("GRADE", HUD_X, 305);
+        g.setFont(Font.font("System", FontWeight.BOLD, 14));
+        g.fillText("GRADE", HUD_X, gradeY);
 
         g.setFill(Color.ORANGE);
-        g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 28));
-        g.fillText(letterGrade, HUD_X, 335);
+        g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 32));
+        g.fillText(letterGrade, HUD_X, gradeY + 32);
 
         g.setFill(Color.DARKGRAY);
-        g.setFont(Font.font("Monospace", FontWeight.NORMAL, 12));
-        g.fillText(String.format("(%.1f%%)", progress * 100), HUD_X + 60, 332);
+        g.setFont(Font.font("Monospace", FontWeight.NORMAL, 14));
+        g.fillText(String.format("(%.1f%%)", progress * 100), HUD_X + 65, gradeY + 28);
 
         g.setFill(Color.rgb(40, 40, 40));
-        g.fillRoundRect(HUD_X, 345, BAR_WIDTH, 8, 4, 4); // Background track
+        g.fillRoundRect(HUD_X, gradeY + 45, BAR_WIDTH, 8, 4, 4); // Background track
         if (progress > 0) {
             g.setFill(Color.ORANGE);
-            g.fillRoundRect(HUD_X, 345, BAR_WIDTH * progress, 8, 4, 4);
+            g.fillRoundRect(HUD_X, gradeY + 45, BAR_WIDTH * progress, 8, 4, 4);
         }
         g.restore();
+
+        // =================================================================
+        // KHU VỰC TRÊN BẢNG GAME (CHỈ COOL / REGRET)
+        // =================================================================
+
+        final double BOTTOM_PANEL_HEIGHT = 44;
+        final double NOTICE_BOX_H = 32;
+        final double NOTICE_BOX_Y = BOARD_BOTTOM_Y + (BOTTOM_PANEL_HEIGHT - NOTICE_BOX_H) / 2.0;
+
+        double boxWidth = 330;
+
         // ---------------------------------------------
-        // Cool display
+        // Cool display (Nếu chế độ này có dùng)
         // ---------------------------------------------
         if (shouldDisplayCool(now)) {
             g.save();
             g.setGlobalAlpha(getCoolAlpha(now));
 
-            double boardX = 250;
-            double boardWidth = 300;
-            // Đã sửa: 50 (TOP_PANEL) + 600 (Chiều cao bảng) = 650
-            double boardBottomY = 650;
-            double bottomPanelHeight = 40; // Chiều cao thực tế có thể là 50 theo như GameRenderer bạn gửi
-
-            double boxWidth = boardWidth - 10;
-            double boxHeight = 28;
-            double boxX = boardX + 5;
-
-            double boxY = boardBottomY + (bottomPanelHeight - boxHeight) / 2.0;
-
             g.setFill(Color.color(0, 0.5, 1.0, 0.85));
-            g.fillRoundRect(boxX, boxY, boxWidth, boxHeight, 6, 6);
+            g.fillRoundRect(BOARD_X + 5, NOTICE_BOX_Y, boxWidth, NOTICE_BOX_H, 6, 6);
 
             g.setFill(Color.WHITE);
-            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 18));
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 20));
             g.setTextAlign(TextAlignment.CENTER);
             g.setTextBaseline(VPos.CENTER);
-
-            g.fillText("COOL!", boardX + boardWidth / 2.0, boxY + boxHeight / 2.0);
+            g.fillText("COOL!", BOARD_CENTER_X, NOTICE_BOX_Y + NOTICE_BOX_H / 2.0);
             g.restore();
         }
 
@@ -423,26 +445,14 @@ public class MasterModeHandler implements GameModeHandler {
             g.save();
             g.setGlobalAlpha(getRegretAlpha(now));
 
-            double boardX = 250;
-            double boardWidth = 300;
-            double boardBottomY = 650;
-            double bottomPanelHeight = 40;
-
-            double boxWidth = boardWidth - 10;
-            double boxHeight = 28;
-            double boxX = boardX + 5;
-
-            double boxY = boardBottomY + (bottomPanelHeight - boxHeight) / 2.0;
-
             g.setFill(Color.color(1.0, 0, 0, 0.85));
-            g.fillRoundRect(boxX, boxY, boxWidth, boxHeight, 6, 6);
+            g.fillRoundRect(BOARD_X + 5, NOTICE_BOX_Y, boxWidth, NOTICE_BOX_H, 6, 6);
 
             g.setFill(Color.WHITE);
-            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 18));
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 20));
             g.setTextAlign(TextAlignment.CENTER);
             g.setTextBaseline(VPos.CENTER);
-
-            g.fillText("REGRET", boardX + boardWidth / 2.0, boxY + boxHeight / 2.0);
+            g.fillText("REGRET", BOARD_CENTER_X, NOTICE_BOX_Y + NOTICE_BOX_H / 2.0);
             g.restore();
         }
     }

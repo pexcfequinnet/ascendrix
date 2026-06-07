@@ -10,6 +10,7 @@ public class OverdriveHandlingTable {
         if (level >= 1200) return frame_to_ns(5);
         if (level >= 500) return frame_to_ns(5.5);
         if (level >= 400) return frame_to_ns(6.25);
+        if (level >= 200) return frame_to_ns(6.75);
         return frame_to_ns(7.5);
     }
     public static long getARR(int level) {

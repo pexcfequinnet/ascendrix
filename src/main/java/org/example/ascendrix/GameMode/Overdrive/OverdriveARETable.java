@@ -15,7 +15,7 @@ public class OverdriveARETable {
         if (level >= 500)  return frame_to_ns(5);
         if (level >= 200)  return frame_to_ns(5.5);
         if (level >= 100)  return frame_to_ns(6);
-        return frame_to_ns(7);
+        return frame_to_ns(6.75);
     }
 
     public static long getClearAnimDelay(int level) {

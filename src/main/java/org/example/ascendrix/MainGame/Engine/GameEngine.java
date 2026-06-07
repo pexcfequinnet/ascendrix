@@ -135,7 +135,7 @@ public class GameEngine {
             perfectClearDisplayTime = -1;
 
         renderer.renderNext(queue.getPreview(), this);
-        renderer.renderHold(holdPiece);
+        renderer.renderHold(holdPiece, this);
         renderer.renderHUD(modeHandler, timer, now);
         renderer.renderCountdown(phase, countdown);
     }
@@ -145,7 +145,6 @@ public class GameEngine {
         phase = GamePhase.CLEARED;
         state = GameState.STOPPED;
         timer.pause();
-        saveScoreToManager();
     }
 
     public void topOut() {
@@ -491,21 +490,9 @@ public class GameEngine {
 
     public void gameOver() {
         phase = GamePhase.GAME_OVER;
-
-        if (mode != GameMode.SPRINT) {
-            saveScoreToManager();
-        }
     }
     // Save score
-    private void saveScoreToManager() {
-        ScoreManager scoreManager = new ScoreManager();
 
-        // Engine không cần quan tâm đây là mode gì, cứ gọi 2 hàm này là Handler tự lo!
-        long sortValue = modeHandler.getSortValue();
-        String displayValue = modeHandler.getDisplayValue();
-
-        scoreManager.addScore(mode.toString(), "AAA", sortValue, displayValue);
-    }
     // Logic
     public boolean canMove(int newX, int newY) {
         return canPlace(current.getBlocks(), newX, newY);
@@ -612,5 +599,13 @@ public class GameEngine {
             if (board[row][col] != null || garbageMap[row][col]) return false;
         }
         return true;
+    }
+
+    public boolean isGameOver() {
+        return phase == GamePhase.GAME_OVER;
+    }
+
+    public boolean isCleared() {
+        return phase ==  GamePhase.CLEARED;
     }
 }

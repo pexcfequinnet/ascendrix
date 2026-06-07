@@ -160,87 +160,138 @@ public class OverdriveModeHandler implements GameModeHandler {
 
     @Override
     public void renderHUD(GraphicsContext g, GameTimer activeTimer, long now) {
-        // Line clear notification
-        g.save();
-        if (hud.shouldDisplay(now)) {
-            g.setGlobalAlpha(hud.getAlpha(now));
-            g.setFill(Color.color(0, 0, 0, 0.75));
-            g.fillRoundRect(140, 150, 110, 50, 10, 10);
-            g.setFill(Color.ORANGE);
-            g.setFont(Font.font("System", FontWeight.BOLD, 16));
-            g.setTextAlign(TextAlignment.CENTER);
-            g.fillText(hud.getClearText(), 195, 180);
-        }
-        g.restore();
+        // -----------------------------------------------------------------
+        // TỌA ĐỘ VÀNG (Chuẩn 1024x768)
+        // -----------------------------------------------------------------
+        final int BOARD_X = 342;           // Điểm bắt đầu của bảng game
+        final int BOARD_CENTER_X = 512;    // Tâm bảng
+        final int BOARD_BOTTOM_Y = 724;    // Đáy bảng (cho event Regret)
 
-        final int HUD_X = 30;
+        // Đẩy HUD sát mép trái bảng game
+        final int HUD_X = 140;
         final int BAR_WIDTH = 180;
-        if (activeTimer != null) this.timer = activeTimer;
+        final int LEFT_CENTER_X = HUD_X + (BAR_WIDTH / 2); // Tâm của phần hiển thị Action (X = 230)
 
-        // Timer
+        // =================================================================
+        // NỬA TRÊN PANEL TRÁI: ACTION NOTIFICATIONS (TỐI GIẢN)
+        // =================================================================
+        if (hud.shouldDisplay(now)) {
+            g.save();
+            g.setGlobalAlpha(hud.getAlpha(now));
+
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 22));
+            g.setTextAlign(TextAlignment.CENTER);
+            g.setTextBaseline(VPos.CENTER);
+
+            // Bỏ hộp nền che khuất, dùng viền chữ đen nổi bật
+            g.setStroke(Color.BLACK);
+            g.setLineWidth(4.0);
+            g.strokeText(hud.getClearText(), LEFT_CENTER_X, 200);
+
+            g.setFill(Color.ORANGE);
+            g.fillText(hud.getClearText(), LEFT_CENTER_X, 200);
+            g.restore();
+        }
+
+        // =================================================================
+        // NỬA DƯỚI PANEL TRÁI: THỐNG KÊ (Nằm sát chân bảng trái)
+        // =================================================================
+        int statsStartY = 450; // Hạ cụm UI xuống nửa dưới
+
+        // -----------------------------------------------------------------
+        // RENDER TIME
+        // -----------------------------------------------------------------
+        if (activeTimer != null) {
+            this.timer = activeTimer;
+        }
+
         long timeMs = (timer != null) ? timer.getElapsedMs() : 0;
         g.save();
         g.setFill(Color.LIGHTGRAY);
         g.setFont(Font.font("Monospace", FontWeight.BOLD, 14));
-        g.fillText("TIME", HUD_X, 150);
+        g.fillText("TIME", HUD_X, statsStartY);
+
         g.setFill(Color.WHITE);
         g.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
-        g.fillText(GameTimer.formatTime(timeMs), HUD_X, 175);
+        g.fillText(GameTimer.formatTime(timeMs), HUD_X, statsStartY + 25);
         g.restore();
 
-        // Level
+        // -----------------------------------------------------------------
+        // RENDER LEVEL PROGRESS (Hỗ trợ 4 chữ số)
+        // -----------------------------------------------------------------
         g.save();
         int displayLevel = Math.min(level, 1500);
         int sectionStart = (displayLevel / 100) * 100;
         int sectionEnd   = Math.min(sectionStart + 100, 1500);
         double sectionPercent = (displayLevel == 1500) ? 1.0 : (double)(displayLevel - sectionStart) / 100.0;
 
+        int levelY = statsStartY + 85;
+
         g.setFill(Color.LIGHTGRAY);
-        g.setFont(Font.font("System", FontWeight.BOLD, 12));
-        g.fillText("LEVEL", HUD_X, 220);
+        g.setFont(Font.font("System", FontWeight.BOLD, 14));
+        g.fillText("LEVEL", HUD_X, levelY);
+
         g.setFill(Color.WHITE);
-        g.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
+        g.setFont(Font.font("Consolas", FontWeight.BOLD, 22));
+
         String levelStr = displayLevel >= 1000
                 ? String.format("%04d", displayLevel)
                 : String.format("%03d", displayLevel);
-        g.fillText(levelStr, HUD_X, 245);
+        g.fillText(levelStr, HUD_X, levelY + 25);
+
         g.setFill(Color.GRAY);
-        g.setFont(Font.font("Monospace", FontWeight.NORMAL, 14));
-        g.fillText(" / " + sectionEnd, HUD_X + 55, 245);
+        g.setFont(Font.font("Consolas", FontWeight.NORMAL, 16));
+        // Dịch chữ " / 1500" sang phải thêm chút để né số level 4 chữ số
+        int offset = displayLevel >= 1000 ? 55 : 45;
+        g.fillText(" / " + sectionEnd, HUD_X + offset, levelY + 25);
 
         g.setFill(Color.rgb(40, 40, 40));
-        g.fillRoundRect(HUD_X, 255, BAR_WIDTH, 8, 4, 4);
+        g.fillRoundRect(HUD_X, levelY + 35, BAR_WIDTH, 8, 4, 4);
         if (sectionPercent > 0) {
             g.setFill(rollTriggered ? Color.GOLD : Color.CYAN);
-            g.fillRoundRect(HUD_X, 255, BAR_WIDTH * sectionPercent, 8, 4, 4);
+            g.fillRoundRect(HUD_X, levelY + 35, BAR_WIDTH * sectionPercent, 8, 4, 4);
         }
         g.restore();
 
-        // Grade
+        // -----------------------------------------------------------------
+        // RENDER GRADE
+        // -----------------------------------------------------------------
         g.save();
+        int gradeY = levelY + 85;
+
         g.setFill(Color.LIGHTGRAY);
-        g.setFont(Font.font("System", FontWeight.BOLD, 12));
-        g.fillText("GRADE", HUD_X, 305);
+        g.setFont(Font.font("System", FontWeight.BOLD, 14));
+        g.fillText("GRADE", HUD_X, gradeY);
+
         g.setFill(gradeHandler.isRollCleared() ? Color.ORANGE : Color.WHITE);
-        g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 28));
-        g.fillText(gradeHandler.getCurrentGrade().label, HUD_X, 335);
+        g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 32));
+        g.fillText(gradeHandler.getCurrentGrade().label, HUD_X, gradeY + 32);
         g.restore();
 
+        // =================================================================
+        // KHU VỰC TRÊN BẢNG GAME (CHỈ COOL / REGRET)
+        // =================================================================
+
+        final double BOTTOM_PANEL_HEIGHT = 44;
+        final double NOTICE_BOX_H = 32;
+        final double NOTICE_BOX_Y = BOARD_BOTTOM_Y + (BOTTOM_PANEL_HEIGHT - NOTICE_BOX_H) / 2.0;
+
+        double boxWidth = 330;
+        // ---------------------------------------------
         // Regret display
+        // ---------------------------------------------
         if (shouldDisplayRegret(now)) {
             g.save();
             g.setGlobalAlpha(getRegretAlpha(now));
-            double boardX = 250, boardWidth = 300, boardBottomY = 650, bottomPanelHeight = 40;
-            double boxWidth = boardWidth - 10, boxHeight = 28;
-            double boxX = boardX + 5;
-            double boxY = boardBottomY + (bottomPanelHeight - boxHeight) / 2.0;
+
             g.setFill(Color.color(1.0, 0, 0, 0.85));
-            g.fillRoundRect(boxX, boxY, boxWidth, boxHeight, 6, 6);
+            g.fillRoundRect(BOARD_X + 5, NOTICE_BOX_Y, boxWidth, NOTICE_BOX_H, 6, 6);
+
             g.setFill(Color.WHITE);
-            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 18));
+            g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 20));
             g.setTextAlign(TextAlignment.CENTER);
             g.setTextBaseline(VPos.CENTER);
-            g.fillText("REGRET", boardX + boardWidth / 2.0, boxY + boxHeight / 2.0);
+            g.fillText("REGRET", BOARD_CENTER_X, NOTICE_BOX_Y + NOTICE_BOX_H / 2.0);
             g.restore();
         }
     }
