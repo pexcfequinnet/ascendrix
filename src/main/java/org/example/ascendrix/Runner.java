@@ -12,4 +12,7 @@ public class Runner extends Application {
         stage.setTitle("Ascendrix");
         stage.show();
     }
+    public static void main(String[] args) {
+        launch(args);
+    }
 }
