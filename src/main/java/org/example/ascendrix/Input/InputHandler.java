@@ -137,7 +137,10 @@ public class InputHandler {
 
     public void attach(Scene scene) {
         scene.setOnKeyPressed(e -> {
-            if (!isRunning.getAsBoolean()) return;
+            // ❌ ĐÃ XÓA: if (!isRunning.getAsBoolean()) return;
+            // Thay vào đó, ta kiểm tra xem game có đang active (PLAYING) không
+            boolean active = isRunning.getAsBoolean();
+
             KeyCode code = e.getCode();
 
             switch (code) {
@@ -156,49 +159,50 @@ public class InputHandler {
                     if (!left) {
                         left = true;
                         lastWasLeft = true;
-                        updateDirectionBuffer();
-                        if (!game.isSpawning()) game.move(-1);
+                        updateDirectionBuffer(); // Luôn lưu IMS
+                        if (active && !game.isSpawning()) game.move(-1);
                     }
                 }
                 case RIGHT -> {
                     if (!right) {
                         right = true;
                         lastWasLeft = false;
-                        updateDirectionBuffer();
-                        if (!game.isSpawning()) game.move(1);
+                        updateDirectionBuffer(); // Luôn lưu IMS
+                        if (active && !game.isSpawning()) game.move(1);
                     }
                 }
                 case SOFT_DROP -> softDrop = true;
                 case ROTATE_CCW -> {
                     if (!rotateCCW) {
                         rotateCCW = true;
-                        lastRotationHeld = RotationDirection.CCW;
-                        if (!game.isSpawning()) game.rotateCCW();
+                        lastRotationHeld = RotationDirection.CCW; // Luôn lưu IRS
+                        if (active && !game.isSpawning()) game.rotateCCW();
                     }
                 }
                 case ROTATE_CW -> {
                     if (!rotateCW) {
                         rotateCW = true;
-                        lastRotationHeld = RotationDirection.CW;
-                        if (!game.isSpawning()) game.rotateCW();
+                        lastRotationHeld = RotationDirection.CW; // Luôn lưu IRS
+                        if (active && !game.isSpawning()) game.rotateCW();
                     }
                 }
                 case HOLD -> {
                     if (!hold) {
                         hold = true;
-                        game.getInputBuffer().bufferHold();
-                        if (!game.isSpawning()) game.hold();
+                        game.getInputBuffer().bufferHold(); // ✅ LUÔN LƯU IHS DÙ ĐANG COUNTDOWN
+                        if (active && !game.isSpawning()) game.hold();
                     }
                 }
                 case HARD_DROP -> {
                     if (!hardDrop) {
                         hardDrop = true;
-                        game.hardDrop(System.nanoTime());
+                        if (active && !game.isSpawning()) game.hardDrop(System.nanoTime());
                     }
                 }
             }
         });
 
+        // KeyReleased thì bạn viết rất chuẩn rồi, không bị block nên giữ nguyên
         scene.setOnKeyReleased(e -> {
             InputAction action = keyToAction.get(e.getCode());
             if (action == null) return;

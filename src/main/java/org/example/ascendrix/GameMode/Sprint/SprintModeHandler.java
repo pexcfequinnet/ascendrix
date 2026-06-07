@@ -25,7 +25,6 @@ public class SprintModeHandler implements GameModeHandler {
     private final HUDHelper hud = new HUDHelper();
 
     @Override public boolean supportsIRS() { return false; }
-    @Override public boolean supportsIHS() { return false; }
     @Override public void setPerfectClearFlag(boolean flag){}
 
     @Override
