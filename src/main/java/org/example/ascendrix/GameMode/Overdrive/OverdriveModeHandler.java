@@ -78,9 +78,13 @@ public class OverdriveModeHandler implements GameModeHandler {
 
         ruleset.are.trigger(true, System.nanoTime());
     }
+    @Override
+    public boolean isRollActive() {
+        return rollTriggered;
+    }
 
     private void checkRollTransition() {
-        if (rollTriggered || level < 1499) return;
+        if (rollTriggered || level < 1500) return;
         rollTriggered = true;
         rollStartTime = -1;
         timer.pause();
@@ -186,17 +190,20 @@ public class OverdriveModeHandler implements GameModeHandler {
 
         // Level
         g.save();
-        int displayLevel = Math.min(level, 1499);
+        int displayLevel = Math.min(level, 1500);
         int sectionStart = (displayLevel / 100) * 100;
-        int sectionEnd   = Math.min(sectionStart + 100, 1499);
-        double sectionPercent = (displayLevel == 1499) ? 1.0 : (double)(displayLevel - sectionStart) / 100.0;
+        int sectionEnd   = Math.min(sectionStart + 100, 1500);
+        double sectionPercent = (displayLevel == 1500) ? 1.0 : (double)(displayLevel - sectionStart) / 100.0;
 
         g.setFill(Color.LIGHTGRAY);
         g.setFont(Font.font("System", FontWeight.BOLD, 12));
         g.fillText("LEVEL", HUD_X, 220);
         g.setFill(Color.WHITE);
         g.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
-        g.fillText(String.format("%04d", displayLevel), HUD_X, 245);
+        String levelStr = displayLevel >= 1000
+                ? String.format("%04d", displayLevel)
+                : String.format("%03d", displayLevel);
+        g.fillText(levelStr, HUD_X, 245);
         g.setFill(Color.GRAY);
         g.setFont(Font.font("Monospace", FontWeight.NORMAL, 14));
         g.fillText(" / " + sectionEnd, HUD_X + 55, 245);

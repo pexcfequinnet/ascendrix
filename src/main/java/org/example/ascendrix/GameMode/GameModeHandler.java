@@ -13,7 +13,6 @@ import org.example.ascendrix.Tetromino.TetrominoType;
 public interface GameModeHandler {
     RulesetHandler getRuleset();
     default boolean supportsPerfectClear() { return false; }
-
     default boolean supportsIRS() { return true; }
     default boolean supportsIHS() { return true; }
     default void onPiecePlaced(GameEngine game) {}
@@ -37,4 +36,5 @@ public interface GameModeHandler {
     default String getDisplayValue() { return ""; }
 
     default boolean isDecolorActive() {return false;};
+    default boolean isRollActive() { return false; }
 }

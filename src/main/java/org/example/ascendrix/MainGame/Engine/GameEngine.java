@@ -148,7 +148,11 @@ public class GameEngine {
         saveScoreToManager();
     }
 
-    public void topOut() {      // called when a piece can't spawn
+    public void topOut() {
+        if (modeHandler.isRollActive()) {
+            clearGame();
+            return;
+        }
         phase = GamePhase.GAME_OVER;
         state = GameState.STOPPED;
         timer.pause();

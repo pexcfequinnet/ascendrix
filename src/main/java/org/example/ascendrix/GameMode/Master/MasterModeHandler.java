@@ -84,7 +84,10 @@ public class MasterModeHandler implements GameModeHandler {
         ruleset.updateLockDelay(getLockDelayForSpeedLevel(), 15);
         ruleset.are.trigger(false, System.nanoTime());
     }
-
+    @Override
+    public boolean isRollActive() {
+        return rollTriggered;
+    }
     @Override
     public void update(long now, GameEngine game) {
         checkRollTimeout(now, game);
@@ -312,7 +315,7 @@ public class MasterModeHandler implements GameModeHandler {
 
             // Canh ngay dưới B2B (B2B Y = 230, cộng thêm 25 pixel khoảng cách)
             double comboX = 195;
-            double comboY = 355;
+            double comboY = 375;
 
             g.setTextAlign(TextAlignment.CENTER);
             g.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 18)); // Size 18 bằng chuẩn với B2B
