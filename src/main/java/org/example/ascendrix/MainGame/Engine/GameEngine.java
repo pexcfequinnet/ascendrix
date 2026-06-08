@@ -255,7 +255,7 @@ public class GameEngine {
         }
         if (!canPlace(current.getBlocks(), current.x, current.y)) {
             topOut();
-            gameOver();
+            if (!modeHandler.isRollActive()) gameOver();
             return;
         }
         MovementSystem movement =

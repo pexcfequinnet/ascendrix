@@ -110,7 +110,8 @@ public class KeyConfigMenu extends VBox {
     private void startListening(Button button, InputAction action) {
         if (listeningButton != null) {
             // Khôi phục nút cũ nếu người chơi click sang nút khác
-            listeningButton.setText(inputHandler.getKeyForAction(listeningAction).toString());
+            KeyCode key = inputHandler.getKeyForAction(listeningAction);
+            listeningButton.setText(key != null ? key.toString() : "UNBOUND");
             listeningButton.setStyle("-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 5;");
         }
 

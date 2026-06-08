@@ -36,7 +36,9 @@ public class ModeDetailScene {
         Label configTitle = new Label("⚙ CONFIGURATION");
         configTitle.setStyle("-fx-text-fill: #AAAAAA; -fx-font-weight: bold; -fx-font-size: 16px;");
 
-        Label startingLevel = createInfoLabel("Start Level: 1");
+        Label startingLevel = createInfoLabel("");
+        if(mode != GameMode.SPRINT)
+            startingLevel = createInfoLabel("Start Level: 1");
         Label dasConfig = createInfoLabel("DAS: Auto");
         Label arrConfig = createInfoLabel("ARR: Auto");
         configBox.getChildren().addAll(configTitle, startingLevel, dasConfig, arrConfig);
@@ -44,18 +46,17 @@ public class ModeDetailScene {
         // 4. Cột phải: High Scores
         VBox scoreBox = new VBox(10);
         scoreBox.setAlignment(Pos.TOP_LEFT);
-        Label scoreTitle = new Label("🏆 HIGH SCORES");
+        Label scoreTitle = new Label("HIGH SCORES");
         scoreTitle.setStyle("-fx-text-fill: #FFD700; -fx-font-weight: bold; -fx-font-size: 16px;");
         scoreBox.getChildren().add(scoreTitle);
 
-        // --- BẮT ĐẦU DÙNG DỮ LIỆU THẬT ---
         ScoreManager scoreManager = new ScoreManager();
         List<ScoreRecord> topScores = scoreManager.getTopScores(mode.toString());
 
         if (topScores.isEmpty()) {
             // Nếu chưa có ai chơi mode này
-            scoreBox.getChildren().add(createInfoLabel("Chưa có kỷ lục nào."));
-            scoreBox.getChildren().add(createInfoLabel("Hãy là người đầu tiên!"));
+            scoreBox.getChildren().add(createInfoLabel("No record."));
+            scoreBox.getChildren().add(createInfoLabel("Become the first person to set a score"));
         } else {
             // ✅ ĐÃ SỬA: Vòng lặp hiển thị danh sách Top 10
             for (int i = 0; i < 10; i++) {
