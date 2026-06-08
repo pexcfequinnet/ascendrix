@@ -31,7 +31,6 @@ public interface GameModeHandler {
     // Trả về con số để ném vào file JSON sắp xếp (Thời gian, Điểm, hoặc Level)
     default long getSortValue() { return 0; }
 
-    default double getGrade() { return 0; }
     // Trả về chuỗi để in ra màn hình (01:25.00, 150,000, S1, GM...)
     default String getDisplayValue() { return ""; }
 

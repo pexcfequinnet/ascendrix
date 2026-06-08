@@ -244,10 +244,10 @@ public class MarathonModeHandler implements GameModeHandler {
 
             g.setStroke(Color.BLACK);
             g.setLineWidth(4.0);
-            g.strokeText("B2B x" + b2bStreak, BOARD_CENTER_X, b2bY);
+            g.strokeText("B2B x" + b2bStreak, LEFT_LABEL_X, b2bY);
 
             g.setFill(b2bColor);
-            g.fillText("B2B x" + b2bStreak, BOARD_CENTER_X, b2bY);
+            g.fillText("B2B x" + b2bStreak, LEFT_LABEL_X, b2bY);
             g.restore();
         }
 

@@ -13,8 +13,6 @@ module org.example.ascendrix {
     opens org.example.ascendrix.Input to javafx.fxml;
     exports org.example.ascendrix.Rotation;
     opens org.example.ascendrix.Rotation to javafx.fxml;
-    exports org.example.ascendrix.MainGame;
-    opens org.example.ascendrix.MainGame to javafx.fxml;
     exports org.example.ascendrix.Tetromino;
     opens org.example.ascendrix.Tetromino to javafx.fxml;
     exports org.example.ascendrix.GameMode.Master;

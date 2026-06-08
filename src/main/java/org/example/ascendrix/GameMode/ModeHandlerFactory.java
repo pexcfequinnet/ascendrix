@@ -10,7 +10,7 @@ public class ModeHandlerFactory {
     public static GameModeHandler create(GameMode mode, GameTimer timer) {
         return switch (mode) {
             case SPRINT -> new SprintModeHandler(40);
-            case MARATHON -> new MarathonModeHandler(4);
+            case MARATHON -> new MarathonModeHandler(200);
             case MASTER -> new MasterModeHandler(timer);
             case OVERDRIVE -> new OverdriveModeHandler(timer);
         };

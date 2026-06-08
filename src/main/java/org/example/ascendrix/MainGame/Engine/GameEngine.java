@@ -360,7 +360,7 @@ public class GameEngine {
     }
 
     public void hardDrop(long now) {
-        if (waitingToSpawn) return;
+        if (waitingToSpawn || spawning) return;
         if (fadeMap != null && fadeMap.isFadingBoard()) return;
         int rows = 0;
         int y = current.y;
@@ -441,6 +441,7 @@ public class GameEngine {
         if (rulesetHandler.are.isDone(now)) {
             waitingToSpawn = false;
             rulesetHandler.are.reset();
+            ((MovementSystem) rulesetHandler.handling).resetDAS();
             spawnBlock();
             modeHandler.onPieceSpawned(this);
         }
