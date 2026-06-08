@@ -166,9 +166,12 @@ public class GameEngine {
             clearGame();
             return;
         }
-        phase = GamePhase.GAME_OVER;
-        state = GameState.STOPPED;
-        timer.pause();
+        else
+        {
+            phase = GamePhase.GAME_OVER;
+            state = GameState.STOPPED;
+            timer.pause();
+        }
     }
 
     private void update(long now) {
@@ -625,4 +628,7 @@ public class GameEngine {
     }
 
 
+    public boolean isCellEmpty(int row, int col) {
+        return board[row][col] == null && !garbageMap[row][col];
+    }
 }

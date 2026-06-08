@@ -104,8 +104,10 @@ public class OverdriveModeHandler implements GameModeHandler {
     private void checkTimeLimit(GameEngine game) {
         if (rollTriggered || timeLimitTriggered) return;
         long elapsed = timer.getElapsedMs();
-        if ((level >= 1000 && elapsed > TIME_LIMIT_1000) ||
-                (level >= 500  && elapsed > TIME_LIMIT_500)) {
+        if (level >= 1000 && elapsed > TIME_LIMIT_1000) {
+            timeLimitTriggered = true;
+            game.clearGame();
+        } else if (level >= 500 && elapsed > TIME_LIMIT_500) {
             timeLimitTriggered = true;
             game.clearGame();
         }

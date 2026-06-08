@@ -76,7 +76,7 @@ public class GameEndScene {
         submitBtn.setOnAction(e -> {
             String playerName = nameInput.getText().trim();
             if (playerName.isEmpty()) {
-                playerName = "Stacker";
+                playerName = "STACKER";
             }
 
             // Lưu điểm

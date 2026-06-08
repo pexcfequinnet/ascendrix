@@ -33,7 +33,7 @@ public class OverdriveGarbageHandler {
         // find empty columns before pushing — these become gaps
         boolean[] isEmpty = new boolean[cols];
         for (int col = 0; col < cols; col++) {
-            isEmpty[col] = game.isColumnEmpty(col);
+            isEmpty[col] = game.isCellEmpty(rows - 1, col);
         }
 
         // push entire board up by one row
