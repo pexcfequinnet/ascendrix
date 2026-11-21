@@ -80,7 +80,7 @@
                     <execution>
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>org.example.ascendrix.Launcher</mainClass>
+                            <mainClass>org.example.ascendrix.Runner</mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
                             <jlinkImageName>app</jlinkImageName>
@@ -108,7 +108,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.example.ascendrix.Launcher</mainClass>
+                                    <mainClass>org.example.ascendrix.Runner</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
