@@ -145,18 +145,24 @@ public class GameSession {
     }
 
     private void spawnBlock(long now) {
+        spawnBlock(now, true);
+    }
+
+    private void spawnBlock(long now, boolean isTurnStart) {
         TetrominoType type = (pendingSpawnType != null) ? pendingSpawnType : queue.next();
         pendingSpawnType = null;
-        holdSlot.resetTurn();
 
-        // IHS (Initial Hold System)
-        if (ruleset.supportsIHS() && holdSlot.canHold() && inputBuffer.isHoldHeld()) {
-            if (holdSlot.isEmpty()) {
-                holdSlot.swap(type);
-                spawnBlock(now);
-                return;
-            } else {
-                type = holdSlot.swap(type);
+        if (isTurnStart) {
+            holdSlot.resetTurn();
+
+            // IHS (Initial Hold System)
+            if (ruleset.supportsIHS() && holdSlot.canHold() && inputBuffer.isHoldHeld()) {
+                if (holdSlot.isEmpty()) {
+                    holdSlot.swap(type);
+                    type = queue.next();
+                } else {
+                    type = holdSlot.swap(type);
+                }
             }
         }
 
@@ -164,7 +170,7 @@ public class GameSession {
 
         // IRS (Initial Rotation System)
         if (ruleset.supportsIRS()) {
-            RotationDirection irs = inputBuffer.getHeldIRS();
+            RotationDirection irs = inputBuffer.getHeldIRS(now);
             if (irs != null) {
                 rotate(irs, now);
             }
@@ -209,7 +215,7 @@ public class GameSession {
         TetrominoType currentType = current.getType();
         if (holdSlot.isEmpty()) {
             holdSlot.swap(currentType);
-            spawnBlock(now);
+            spawnBlock(now, false);
         } else {
             TetrominoType swapped = holdSlot.swap(currentType);
             current = new ActivePiece(swapped, SPAWN_X, getSpawnYOffset(swapped));
@@ -442,6 +448,15 @@ public class GameSession {
         public long asSortValue() {
             return (rawValue instanceof Number n) ? n.longValue() : 0L;
         }
+    }
+    public GameResult getResult() {
+        long elapsed = timer.getElapsedMs();
+        if (ruleset == null) {
+            return new GameResult("", 0L, elapsed);
+        }
+        GameResult base = ruleset.getResult();
+        long finalElapsed = (base.elapsedMs() > 0L) ? base.elapsedMs() : elapsed;
+        return new GameResult(base.displayText(), base.rawValue(), finalElapsed);
     }
 
     /* ========================== GETTERS ========================== */

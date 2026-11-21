@@ -28,6 +28,8 @@ public class SceneManager {
 
         KeyBindingConfig keyBindingConfig = new KeyBindingConfig();
         this.inputController = new InputController(keyBindingConfig, storageController);
+
+        this.playerHandling = this.storageController.loadHandling();
     }
 
     public SceneManager(Stage stage,
@@ -102,10 +104,16 @@ public class SceneManager {
     }
 
     public HandlingConfig getPlayerHandling() {
+        if (playerHandling == null) {
+            playerHandling = HandlingConfig.defaultConfig();
+        }
         return playerHandling;
     }
 
-    public void setPlayerHandling(HandlingConfig playerHandling) {
-        this.playerHandling = playerHandling;
+    public void updatePlayerHandling(HandlingConfig playerHandling) {
+        this.playerHandling = (playerHandling != null)
+                ? playerHandling.copy()
+                : HandlingConfig.defaultConfig();
+        this.storageController.saveHandling(this.playerHandling);
     }
 }

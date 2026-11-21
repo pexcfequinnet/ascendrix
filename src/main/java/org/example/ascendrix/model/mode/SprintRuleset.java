@@ -12,7 +12,6 @@ import org.example.ascendrix.model.mechanics.rotation.SpinType;
 import org.example.ascendrix.model.piece.TetrominoQueue;
 import org.example.ascendrix.model.state.GameSession;
 import org.example.ascendrix.model.state.GameSession.GameResult;
-import org.example.ascendrix.model.state.GameTimer;
 
 public class SprintRuleset extends BaseModeRuleset {
 
@@ -49,7 +48,7 @@ public class SprintRuleset extends BaseModeRuleset {
 
     public static SprintRuleset create(int targetLines, HandlingConfig playerHandling) {
         HandlingConfig config = (playerHandling != null)
-                ? playerHandling
+                ? playerHandling.copy()
                 : HandlingConfig.defaultConfig();
 
         return new SprintRuleset(

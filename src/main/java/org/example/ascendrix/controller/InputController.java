@@ -97,12 +97,16 @@ public class InputController {
                     }
                 }
                 case SOFT_DROP -> softDrop = true;
+
                 case ROTATE_CCW -> {
                     if (!rotateCCW) {
                         rotateCCW = true;
                         lastRotationHeld = RotationDirection.CCW;
                         updateRotationBuffer();
-                        if (canActImmediately) session.rotateCCW();
+                        if (canActImmediately) {
+                            session.rotateCCW();
+                            inputBuffer.markRotationConsumed();
+                        }
                     }
                 }
                 case ROTATE_CW -> {
@@ -110,7 +114,10 @@ public class InputController {
                         rotateCW = true;
                         lastRotationHeld = RotationDirection.CW;
                         updateRotationBuffer();
-                        if (canActImmediately) session.rotateCW();
+                        if (canActImmediately) {
+                            session.rotateCW();
+                            inputBuffer.markRotationConsumed();
+                        }
                     }
                 }
                 case HOLD -> {
@@ -145,6 +152,7 @@ public class InputController {
                     updateDirectionBuffer();
                 }
                 case SOFT_DROP -> softDrop = false;
+
                 case ROTATE_CCW -> {
                     rotateCCW = false;
                     updateRotationBuffer();
@@ -183,6 +191,9 @@ public class InputController {
         if (inputBuffer == null) return;
         RotationDirection held = getHeldIRS();
         inputBuffer.bufferRotation(held != null ? held : RotationDirection.NONE);
+        if (held != null && isPieceControllable()) {
+            inputBuffer.markRotationConsumed();
+        }
     }
 
     private void handleDebugShortcuts(KeyCode code) {

@@ -48,17 +48,20 @@ public class MenuScene {
         // 2. Mode & Settings Buttons
         Button sprintBtn = new Button("SPRINT");
         Button marathonBtn = new Button("MARATHON");
+        Button ultraBtn = new Button("ULTRA");
         Button masterBtn = new Button("MASTER");
         Button overdriveBtn = new Button("OVERDRIVE");
         Button settingsBtn = new Button("SETTINGS");
 
         sprintBtn.setOnAction(e -> manager.showModeDetail(GameMode.SPRINT));
         marathonBtn.setOnAction(e -> manager.showModeDetail(GameMode.MARATHON));
+        ultraBtn.setOnAction(e -> manager.showModeDetail(GameMode.ULTRA));
         masterBtn.setOnAction(e -> manager.showModeDetail(GameMode.MASTER));
         overdriveBtn.setOnAction(e -> manager.showModeDetail(GameMode.OVERDRIVE));
 
         styleButton(sprintBtn, "#00c8c8", "#00e1e1");
         styleButton(marathonBtn, "#66BB6A", "#81C784");
+        styleButton(ultraBtn, "#FFA726", "#FFB74D");
         styleButton(masterBtn, "#42A5F5", "#64B5F6");
         styleButton(overdriveBtn, "#EF5350", "#E57373");
         styleButton(settingsBtn, "#424242", "#616161");
@@ -66,7 +69,7 @@ public class MenuScene {
 
 
         // 3. Layout
-        VBox root = new VBox(15, titleText, sprintBtn, marathonBtn, masterBtn, overdriveBtn, settingsBtn);
+        VBox root = new VBox(15, titleText, sprintBtn, marathonBtn, masterBtn, ultraBtn, overdriveBtn, settingsBtn);
         root.setStyle("-fx-background-color: #1A1A1A; -fx-padding: 30;");
         root.setAlignment(Pos.CENTER);
 
@@ -79,6 +82,7 @@ public class MenuScene {
             );
             manager.setScene(keyConfigScene.getScene());
         });
+
     }
 
     private void styleButton(Button btn, String bgColor, String hoverColor) {

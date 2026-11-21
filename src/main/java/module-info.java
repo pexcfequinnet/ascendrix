@@ -31,4 +31,5 @@ module org.example.ascendrix {
     // Controller
     exports org.example.ascendrix.controller;
     opens org.example.ascendrix.model.input to com.google.gson;
+    opens org.example.ascendrix.view.render to javafx.fxml;
 }

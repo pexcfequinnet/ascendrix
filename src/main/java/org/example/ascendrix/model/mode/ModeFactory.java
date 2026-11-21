@@ -19,7 +19,7 @@ public final class ModeFactory {
 
         return switch (mode) {
             case SPRINT    -> SprintRuleset.create(playerHandling);
-            case ULTRA     -> null; //UltraRuleset.create(playerHandling);
+            case ULTRA     -> UltraRuleset.create();
             case MARATHON  -> MarathonRuleset.create(playerHandling);
             case MASTER    -> MasterRuleset.create();
             case OVERDRIVE -> OverdriveRuleset.create();

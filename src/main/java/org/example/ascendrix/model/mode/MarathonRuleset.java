@@ -18,6 +18,7 @@ public class MarathonRuleset extends BaseModeRuleset {
     public static final int DEFAULT_TARGET_LINES = 200;
     public static final int MAX_LEVEL = 20;
     private static final int LINES_PER_LEVEL = 10;
+    private static final double GRAVITY_20G_SECONDS = 1.0 / (60.0 * 20.0);
 
     /* ========================== TIMING & HANDLING CONSTANTS ========================== */
 
@@ -48,13 +49,16 @@ public class MarathonRuleset extends BaseModeRuleset {
     private static final int    MINI_SPIN_BASE_POINTS    = 115;
 
     private static final int    DROP_POINTS_PER_ROW      = 5;
-    private static final int    MAX_COMBO                = 25;
-    private static final double COMBO_LOG_BASE           = 10_000.0;
-    private static final double LEVEL_LOG_BASE           = 40.0;
+    private static final int    COMBO_START_COUNT        = 2;
+    private static final int    COMBO_CAP_COUNT          = 20;
+    private static final double MAX_COMBO_MULTIPLIER     = 1.25;
 
-    private static final int[]    B2B_THRESHOLDS   = { 7, 14, 22, 36, 54 };
-    private static final double[] B2B_TIERS        = { 1.2, 1.4, 1.6, 1.8, 2.0 };
-    private static final double[] MINI_B2B_TIERS   = { 1.1, 1.2, 1.4, 1.6, 1.8 };
+    private static final int    MULTIPLIER_CAP_LEVEL = 20;
+    private static final double MAX_LEVEL_MULTIPLIER = 2.0;
+
+    private static final int[]    B2B_THRESHOLDS   = { 3, 7, 15, 31, 63 };
+    private static final double[] B2B_TIERS        = { 1.2, 1.4, 1.8, 2.6, 3.2 };
+    private static final double[] MINI_B2B_TIERS   = { 1.1, 1.2, 1.4, 1.8, 2.6 };
 
     /* ========================== STATE ========================== */
 
@@ -89,6 +93,7 @@ public class MarathonRuleset extends BaseModeRuleset {
         onLevelChanged(1);
         syncHUD(0L);
     }
+
 
     public static MarathonRuleset create() {
         return create(DEFAULT_TARGET_LINES, null);
@@ -125,11 +130,14 @@ public class MarathonRuleset extends BaseModeRuleset {
     private static double[] computeGravityTable() {
         double[] table = new double[MAX_LEVEL + 1];
         for (int lvl = 1; lvl <= MAX_LEVEL; lvl++) {
-            table[lvl] = Math.pow(0.8 - ((lvl - 1) * 0.007), lvl - 1);
+            if (lvl > 19) {
+                table[lvl] = GRAVITY_20G_SECONDS;
+            } else {
+                table[lvl] = Math.pow(0.8 - ((lvl - 1) * 0.007), lvl - 1);
+            }
         }
         return table;
     }
-
     public static long gravityNsForLevel(int level) {
         int clamped = Math.clamp(level, 1, GRAVITY_SECONDS.length - 1);
         return (long) (GRAVITY_SECONDS[clamped] * 1_000_000_000L);
@@ -167,6 +175,7 @@ public class MarathonRuleset extends BaseModeRuleset {
         this.lastNowNs = now;
         syncHUD(session.getTimer().getElapsedMs(now));
     }
+
 
     @Override
     public void setPerfectClearFlag(boolean perfectClear) {
@@ -207,8 +216,8 @@ public class MarathonRuleset extends BaseModeRuleset {
         b2bActive = isB2B;
 
         // 3. Award clear score & advance combo
+        combo++;
         score += calculateClearScore(lines, spin, isB2B, perfectClear);
-        combo = Math.min(combo + 1, MAX_COMBO);
         this.perfectClear = false;
 
         // 4. Sync HUD & check win condition
@@ -266,15 +275,18 @@ public class MarathonRuleset extends BaseModeRuleset {
     }
 
     private double getComboMultiplier(int currentCombo) {
-        return logBase(currentCombo + 1, COMBO_LOG_BASE) + 1.0;
+        if (currentCombo < COMBO_START_COUNT) return 1.0;
+        int capped = Math.min(currentCombo, COMBO_CAP_COUNT);
+        double progress = (double) (capped - (COMBO_START_COUNT - 1))
+                / (COMBO_CAP_COUNT - (COMBO_START_COUNT - 1));
+        return 1.0 + (MAX_COMBO_MULTIPLIER - 1.0) * progress;
     }
 
     private double getLevelMultiplier(int currentLevel) {
-        return logBase(Math.max(1, currentLevel), LEVEL_LOG_BASE) + 1.0;
-    }
-
-    private static double logBase(double value, double base) {
-        return Math.log(value) / Math.log(base);
+        int capped = Math.clamp(currentLevel, 1, MULTIPLIER_CAP_LEVEL);
+        double progress = (capped - 1.0) / (MULTIPLIER_CAP_LEVEL - 1.0);
+        double p2 = progress * progress;
+        return 1.0 + (MAX_LEVEL_MULTIPLIER - 1.0) * (p2 * p2); // p^4 (use p2 * progress for p^3)
     }
 
     public static int getB2BTier(int streak) {
@@ -298,7 +310,7 @@ public class MarathonRuleset extends BaseModeRuleset {
 
     @Override
     public boolean supportsPerfectClear() {
-        return true;
+        return super.supportsPerfectClear();
     }
 
     @Override
