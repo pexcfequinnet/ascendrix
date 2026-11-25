@@ -11,7 +11,12 @@ public class Board {
     private final TetrominoType[][] grid = new TetrominoType[ROWS][COLS];
     private final boolean[][] garbageMap = new boolean[ROWS][COLS];
     private final boolean[][] boneMap = new boolean[ROWS][COLS];
+    private final int[] highestOccupiedRow = new int[COLS];
     private FadeMap fadeMap;
+
+    public Board() {
+        Arrays.fill(highestOccupiedRow, ROWS);
+    }
 
     public void setFadeMap(FadeMap fadeMap) {
         this.fadeMap = fadeMap;
@@ -35,7 +40,46 @@ public class Board {
                     }
                 }
             }
+            recomputeColumnHeights();
         }
+    }
+
+    private void recomputeColumnHeights() {
+        for (int col = 0; col < COLS; col++) {
+            int top = ROWS;
+            for (int row = 0; row < ROWS; row++) {
+                if (isOccupied(row, col)) {
+                    top = row;
+                    break;
+                }
+            }
+            highestOccupiedRow[col] = top;
+        }
+    }
+
+    /**
+     * Computes the resting Y coordinate directly from column heights (bottom-up placement).
+     * Returns Integer.MIN_VALUE if the piece cannot legally rest on the board (top-out or out of bounds).
+     */
+    public int findBottomUpLandingY(int[][] shape, int targetX, int minAllowedY) {
+        int landingY = ROWS - 1;
+
+        for (int[] p : shape) {
+            int x = targetX + p[0];
+            if (x < 0 || x >= COLS) {
+                return Integer.MIN_VALUE;
+            }
+            int maxOriginYForCol = (highestOccupiedRow[x] - 1) - p[1];
+            if (maxOriginYForCol < landingY) {
+                landingY = maxOriginYForCol;
+            }
+        }
+
+        if (landingY < minAllowedY || !canPlace(shape, targetX, landingY)) {
+            return Integer.MIN_VALUE;
+        }
+
+        return landingY;
     }
 
     public boolean canPlace(int[][] shape, int targetX, int targetY) {
@@ -60,6 +104,9 @@ public class Board {
                 grid[y][x] = type;
                 garbageMap[y][x] = false;
                 boneMap[y][x] = bone;
+                if (y < highestOccupiedRow[x]) {
+                    highestOccupiedRow[x] = y;
+                }
             }
         }
     }
@@ -92,6 +139,10 @@ public class Board {
             fadeMap.clearTopRows(linesCleared);
         }
 
+        if (linesCleared > 0) {
+            recomputeColumnHeights();
+        }
+
         return linesCleared;
     }
 
@@ -107,9 +158,13 @@ public class Board {
             System.arraycopy(garbageMap[row + 1], 0, garbageMap[row], 0, COLS);
             System.arraycopy(boneMap[row + 1], 0, boneMap[row], 0, COLS);
         }
+        if (fadeMap != null) {
+            fadeMap.shiftRowsUp();
+        }
         Arrays.fill(grid[ROWS - 1], null);
         Arrays.fill(garbageMap[ROWS - 1], false);
         Arrays.fill(boneMap[ROWS - 1], false);
+        recomputeColumnHeights();
         return true;
     }
 
@@ -117,6 +172,9 @@ public class Board {
         grid[row][col] = null;
         garbageMap[row][col] = true;
         boneMap[row][col] = false;
+        if (row < highestOccupiedRow[col]) {
+            highestOccupiedRow[col] = row;
+        }
     }
 
     public boolean isGarbageCell(int row, int col) {
@@ -132,17 +190,12 @@ public class Board {
     }
 
     public boolean isColumnEmpty(int col) {
-        for (int row = 0; row < ROWS; row++) {
-            if (isOccupied(row, col)) return false;
-        }
-        return true;
+        return highestOccupiedRow[col] == ROWS;
     }
 
     public boolean isEmpty() {
-        for (int y = 0; y < ROWS; y++) {
-            for (int x = 0; x < COLS; x++) {
-                if (isOccupied(y, x)) return false;
-            }
+        for (int col = 0; col < COLS; col++) {
+            if (highestOccupiedRow[col] != ROWS) return false;
         }
         return true;
     }

@@ -8,12 +8,14 @@ import java.util.Arrays;
 public class FadeMap {
 
     private static final long BOARD_FADE_INTERVAL_NS  = 100_000_000L;   // 100 ms per row
-    private static final long FADING_DELAY_NS         = 3_000_000_000L; // 3.0 s visible before fade
-    private static final long FADING_DURATION_NS      = 600_000_000L;   // 600 ms fade-out
+    private static final long FADING_DELAY_NS         = 3_000_000_000L; // 3.0 s default visible before fade
+    private static final long FADING_DURATION_NS      = 600_000_000L;   // 600 ms default fade-out
     private static final long INVISIBLE_DURATION_NS   = 100_000_000L;   // 100 ms flash on lock
 
     private RollPhase phase = RollPhase.NORMAL;
     private final long[][] spawnTimes = new long[Board.ROWS][Board.COLS];
+    private long customFadingDelayNs = FADING_DELAY_NS;
+    private long customFadingDurationNs = FADING_DURATION_NS;
 
     // Board wipe-fade state
     private boolean fadingBoard = false;
@@ -21,6 +23,29 @@ public class FadeMap {
     private long lastFadeTime = -1L;
     private long boardFadeCompleteTime = -1L;
     private long currentFrameTime = -1L;
+
+    /* ========================== NON-WIPING FADING ========================== */
+
+    public void activateFading(long now, long fadingDelayNs) {
+        activateFading(now, fadingDelayNs, FADING_DURATION_NS);
+    }
+
+    public void activateFading(long now, long fadingDelayNs, long fadingDurationNs) {
+        this.phase = RollPhase.FADING;
+        this.fadingBoard = false;
+        this.boardFadeCompleteTime = now;
+        this.currentFrameTime = now;
+        setFadingTimingNs(fadingDelayNs, fadingDurationNs);
+    }
+
+    public void setFadingDelayNs(long fadingDelayNs) {
+        this.customFadingDelayNs = Math.max(0L, fadingDelayNs);
+    }
+
+    public void setFadingTimingNs(long fadingDelayNs, long fadingDurationNs) {
+        this.customFadingDelayNs = Math.max(0L, fadingDelayNs);
+        this.customFadingDurationNs = Math.max(1L, fadingDurationNs);
+    }
 
     /* ========================== BOARD WIPE FADE ========================== */
 
@@ -34,6 +59,8 @@ public class FadeMap {
         this.fadingBoard = true;
         this.fadeRow = totalRows - 1;
         this.lastFadeTime = now;
+        this.customFadingDelayNs = FADING_DELAY_NS;
+        this.customFadingDurationNs = FADING_DURATION_NS;
         clearSpawnTimes();
     }
 
@@ -87,8 +114,8 @@ public class FadeMap {
             return (phase == RollPhase.INVISIBLE) ? 0.0 : 1.0;
         }
 
-        long delay    = (phase == RollPhase.INVISIBLE) ? 0L : FADING_DELAY_NS;
-        long duration = (phase == RollPhase.INVISIBLE) ? INVISIBLE_DURATION_NS : FADING_DURATION_NS;
+        long delay    = (phase == RollPhase.INVISIBLE) ? 0L : customFadingDelayNs;
+        long duration = (phase == RollPhase.INVISIBLE) ? INVISIBLE_DURATION_NS : customFadingDurationNs;
 
         long fadeTime = spawnTime + delay;
         long now = (currentFrameTime != -1L) ? currentFrameTime : System.nanoTime();
@@ -105,6 +132,13 @@ public class FadeMap {
             System.arraycopy(spawnTimes[y - 1], 0, spawnTimes[y], 0, Board.COLS);
         }
         Arrays.fill(spawnTimes[0], 0L);
+    }
+
+    public void shiftRowsUp() {
+        for (int y = 0; y < Board.ROWS - 1; y++) {
+            System.arraycopy(spawnTimes[y + 1], 0, spawnTimes[y], 0, Board.COLS);
+        }
+        Arrays.fill(spawnTimes[Board.ROWS - 1], 0L);
     }
 
     public void copyRow(int fromY, int toY) {
@@ -127,6 +161,8 @@ public class FadeMap {
         this.fadeRow = -1;
         this.lastFadeTime = -1L;
         this.currentFrameTime = -1L;
+        this.customFadingDelayNs = FADING_DELAY_NS;
+        this.customFadingDurationNs = FADING_DURATION_NS;
         clearSpawnTimes();
     }
 

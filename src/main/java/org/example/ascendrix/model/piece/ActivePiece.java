@@ -31,6 +31,10 @@ public class ActivePiece {
 
     /* ========================== MOVEMENT & POSITION ========================== */
 
+    public void setY(int y) {
+        this.y = y;
+    }
+
     public void moveHorizontal(int dx) {
         if (dx == 0) return;
         this.x += dx;
@@ -115,4 +119,6 @@ public class ActivePiece {
         }
         return copy;
     }
+
 }
+

@@ -1,13 +1,18 @@
 package org.example.ascendrix.controller;
 
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.stage.Window;
 import org.example.ascendrix.model.input.InputBuffer;
-import org.example.ascendrix.model.mechanics.rotation.RotationDirection;
 import org.example.ascendrix.model.input.KeyBindingConfig;
-import org.example.ascendrix.model.state.GameSession;
 import org.example.ascendrix.model.input.KeyBindingConfig.InputAction;
+import org.example.ascendrix.model.mechanics.rotation.RotationDirection;
+import org.example.ascendrix.model.state.GameSession;
 
 public class InputController {
 
@@ -25,8 +30,21 @@ public class InputController {
     private boolean softDrop;
     private boolean rotateCW;
     private boolean rotateCCW;
+    private boolean rotate180;
     private boolean hardDrop;
     private boolean hold;
+
+    private Scene attachedScene;
+    private Window attachedWindow;
+
+    private final EventHandler<KeyEvent> keyPressedFilter = this::handleKeyPressed;
+    private final EventHandler<KeyEvent> keyReleasedFilter = this::handleKeyReleased;
+    private final EventHandler<KeyEvent> keyTypedBlocker = Event::consume;
+    private final ChangeListener<Boolean> focusListener = (obs, wasFocused, isFocused) -> {
+        if (!isFocused) {
+            resetState(); // Prevents stuck DAS/ARR if Alt+Tab or an OS popup steals focus
+        }
+    };
 
     public InputController(KeyBindingConfig bindingConfig, StorageController storageController) {
         this.bindingConfig = bindingConfig;
@@ -68,126 +86,181 @@ public class InputController {
     /* ========================== SCENE LISTENER BINDING ========================== */
 
     public void attach(Scene scene) {
-        scene.setOnKeyPressed(e -> {
-            if (session == null || inputBuffer == null) return;
+        detach();
+        this.attachedScene = scene;
 
-            KeyCode code = e.getCode();
-            handleDebugShortcuts(code);
+        // 1. Suppress JavaFX IME composition & character translation on the game scene
+        scene.getRoot().setInputMethodRequests(null);
+        scene.addEventFilter(KeyEvent.KEY_TYPED, keyTypedBlocker);
 
-            InputAction action = bindingConfig.getActionForKey(code.name());
-            if (action == null) return;
+        // 2. Capture raw key transitions before Scene focus traversal (Tab/Arrows/Space/Alt)
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, keyPressedFilter);
+        scene.addEventFilter(KeyEvent.KEY_RELEASED, keyReleasedFilter);
 
-            boolean canActImmediately = isPieceControllable();
+        // 3. Reset held keys immediately if the window loses focus
+        bindWindowFocusGuard(scene.getWindow());
+        scene.windowProperty().addListener((obs, oldWin, newWin) -> bindWindowFocusGuard(newWin));
 
-            switch (action) {
-                case LEFT -> {
-                    if (!left) {
-                        left = true;
-                        lastWasLeft = true;
-                        updateDirectionBuffer();
-                        if (canActImmediately) session.move(-1);
-                    }
-                }
-                case RIGHT -> {
-                    if (!right) {
-                        right = true;
-                        lastWasLeft = false;
-                        updateDirectionBuffer();
-                        if (canActImmediately) session.move(1);
-                    }
-                }
-                case SOFT_DROP -> softDrop = true;
+        Platform.runLater(() -> {
+            scene.getRoot().requestFocus();
+            RawInputHandler.enableForWindow(scene.getWindow());
+        });
+    }
 
-                case ROTATE_CCW -> {
-                    if (!rotateCCW) {
-                        rotateCCW = true;
-                        lastRotationHeld = RotationDirection.CCW;
-                        updateRotationBuffer();
-                        if (canActImmediately) {
-                            session.rotateCCW();
-                            inputBuffer.markRotationConsumed();
-                        }
-                    }
-                }
-                case ROTATE_CW -> {
-                    if (!rotateCW) {
-                        rotateCW = true;
-                        lastRotationHeld = RotationDirection.CW;
-                        updateRotationBuffer();
-                        if (canActImmediately) {
-                            session.rotateCW();
-                            inputBuffer.markRotationConsumed();
-                        }
-                    }
-                }
-                case HOLD -> {
-                    if (!hold) {
-                        hold = true;
-                        inputBuffer.bufferHold();
-                        if (canActImmediately) session.hold();
-                    }
-                }
-                case HARD_DROP -> {
-                    if (!hardDrop) {
-                        hardDrop = true;
-                        if (canActImmediately) session.hardDrop(System.nanoTime());
-                    }
+    public void detach() {
+        if (attachedScene != null) {
+            attachedScene.removeEventFilter(KeyEvent.KEY_TYPED, keyTypedBlocker);
+            attachedScene.removeEventFilter(KeyEvent.KEY_PRESSED, keyPressedFilter);
+            attachedScene.removeEventFilter(KeyEvent.KEY_RELEASED, keyReleasedFilter);
+            attachedScene = null;
+        }
+        if (attachedWindow != null) {
+            attachedWindow.focusedProperty().removeListener(focusListener);
+            attachedWindow = null;
+        }
+    }
+
+    private void bindWindowFocusGuard(Window window) {
+        if (attachedWindow != null) {
+            attachedWindow.focusedProperty().removeListener(focusListener);
+        }
+        attachedWindow = window;
+        if (attachedWindow != null) {
+            attachedWindow.focusedProperty().addListener(focusListener);
+        }
+    }
+
+    private void handleKeyPressed(KeyEvent e) {
+        if (session == null || inputBuffer == null) return;
+
+        long nowNs = System.nanoTime();
+        KeyCode code = e.getCode();
+        handleDebugShortcuts(code);
+
+        InputAction action = bindingConfig.getActionForKey(code.name());
+        if (action == null) return;
+
+        // Consume bound game keys so UI focus navigation or mnemonics never trigger
+        e.consume();
+
+        switch (action) {
+            case LEFT -> {
+                if (!left) {
+                    left = true;
+                    lastWasLeft = true;
+                    inputBuffer.enqueueAction(InputAction.LEFT, nowNs);
                 }
             }
-        });
-
-        scene.setOnKeyReleased(e -> {
-            if (inputBuffer == null) return;
-
-            InputAction action = bindingConfig.getActionForKey(e.getCode().name());
-            if (action == null) return;
-
-            switch (action) {
-                case LEFT -> {
-                    left = false;
-                    updateDirectionBuffer();
+            case RIGHT -> {
+                if (!right) {
+                    right = true;
+                    lastWasLeft = false;
+                    inputBuffer.enqueueAction(InputAction.RIGHT, nowNs);
                 }
-                case RIGHT -> {
-                    right = false;
-                    updateDirectionBuffer();
-                }
-                case SOFT_DROP -> softDrop = false;
-
-                case ROTATE_CCW -> {
-                    rotateCCW = false;
-                    updateRotationBuffer();
-                }
-                case ROTATE_CW -> {
-                    rotateCW = false;
-                    updateRotationBuffer();
-                }
-                case HOLD -> {
-                    hold = false;
-                    inputBuffer.clearHold();
-                }
-                case HARD_DROP -> hardDrop = false;
             }
-        });
+            case SOFT_DROP -> softDrop = true;
 
-        Platform.runLater(() -> scene.getRoot().requestFocus());
+            case ROTATE_CCW -> {
+                if (!rotateCCW) {
+                    rotateCCW = true;
+                    lastRotationHeld = RotationDirection.CCW;
+                    inputBuffer.enqueueAction(InputAction.ROTATE_CCW, nowNs);
+                }
+            }
+            case ROTATE_CW -> {
+                if (!rotateCW) {
+                    rotateCW = true;
+                    lastRotationHeld = RotationDirection.CW;
+                    inputBuffer.enqueueAction(InputAction.ROTATE_CW, nowNs);
+                }
+            }
+            case ROTATE_180 -> {
+                if (!rotate180) {
+                    rotate180 = true;
+                    lastRotationHeld = RotationDirection.FLIP;
+                    inputBuffer.enqueueAction(InputAction.ROTATE_180, nowNs);
+                }
+            }
+            case HOLD -> {
+                if (!hold) {
+                    hold = true;
+                    inputBuffer.bufferHold();
+                    inputBuffer.enqueueAction(InputAction.HOLD, nowNs);
+                }
+            }
+            case HARD_DROP -> {
+                if (!hardDrop) {
+                    hardDrop = true;
+                    inputBuffer.enqueueAction(InputAction.HARD_DROP, nowNs);
+                }
+            }
+        }
+    }
+
+    private void handleKeyReleased(KeyEvent e) {
+        if (inputBuffer == null) return;
+
+        long nowNs = System.nanoTime();
+        InputAction action = bindingConfig.getActionForKey(e.getCode().name());
+        if (action == null) return;
+
+        e.consume();
+
+        switch (action) {
+            case LEFT -> {
+                left = false;
+                if (!left && !right) inputBuffer.clearDirection();
+            }
+            case RIGHT -> {
+                right = false;
+                if (!left && !right) inputBuffer.clearDirection();
+            }
+            case SOFT_DROP -> softDrop = false;
+
+            case ROTATE_CCW -> {
+                rotateCCW = false;
+                if (getHeldIRS() == null) inputBuffer.clearRotation();
+            }
+            case ROTATE_CW -> {
+                rotateCW = false;
+                if (getHeldIRS() == null) inputBuffer.clearRotation();
+            }
+            case ROTATE_180 -> {
+                rotate180 = false;
+                if (getHeldIRS() == null) inputBuffer.clearRotation();
+            }
+            case HOLD -> {
+                hold = false;
+                inputBuffer.clearHold();
+            }
+            case HARD_DROP -> hardDrop = false;
+        }
     }
 
     /* ========================== BUFFER & STATE HELPERS ========================== */
 
-    private void updateDirectionBuffer() {
+    private void updateDirectionBuffer(long nowNs) {
         if (inputBuffer == null) return;
+        int dir = 0;
         if (left && right) {
-            inputBuffer.bufferDirection(lastWasLeft ? -1 : 1);
+            dir = lastWasLeft ? -1 : 1;
         } else if (left) {
-            inputBuffer.bufferDirection(-1);
+            dir = -1;
         } else if (right) {
-            inputBuffer.bufferDirection(1);
+            dir = 1;
+        }
+
+        if (dir != 0) {
+            inputBuffer.bufferDirection(dir, nowNs);
+            if (isPieceControllable()) {
+                inputBuffer.markDirectionConsumed();
+            }
         } else {
             inputBuffer.clearDirection();
         }
     }
 
-    private void updateRotationBuffer() {
+    private void updateRotationBuffer(long nowNs) {
         if (inputBuffer == null) return;
         RotationDirection held = getHeldIRS();
         inputBuffer.bufferRotation(held != null ? held : RotationDirection.NONE);
@@ -220,10 +293,24 @@ public class InputController {
     }
 
     public RotationDirection getHeldIRS() {
-        if (rotateCW && rotateCCW) return lastRotationHeld;
+        int heldCount = (rotateCW ? 1 : 0) + (rotateCCW ? 1 : 0) + (rotate180 ? 1 : 0);
+        if (heldCount == 0) return null;
+        if (heldCount > 1 && isRotationHeld(lastRotationHeld)) {
+            return lastRotationHeld;
+        }
+        if (rotate180) return RotationDirection.FLIP;
         if (rotateCW) return RotationDirection.CW;
         if (rotateCCW) return RotationDirection.CCW;
         return null;
+    }
+
+    private boolean isRotationHeld(RotationDirection dir) {
+        return switch (dir) {
+            case CW -> rotateCW;
+            case CCW -> rotateCCW;
+            case FLIP -> rotate180;
+            case NONE -> false;
+        };
     }
 
     public int getHorizontal() {
@@ -244,6 +331,7 @@ public class InputController {
         softDrop = false;
         rotateCW = false;
         rotateCCW = false;
+        rotate180 = false;
         hardDrop = false;
         hold = false;
         lastRotationHeld = RotationDirection.NONE;

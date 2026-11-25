@@ -1,30 +1,63 @@
 package org.example.ascendrix.model.input;
 
+import org.example.ascendrix.model.input.KeyBindingConfig.InputAction;
 import org.example.ascendrix.model.mechanics.rotation.RotationDirection;
 
+import java.util.ArrayDeque;
+
 public class InputBuffer {
+
     private static final long NS_PER_FRAME = 1_000_000_000L / 60L;
-    public static final int DEFAULT_IMS_BUFFER_FRAMES = 2; // ~50 ms at 60 FPS
-    public static final int DEFAULT_IRS_BUFFER_FRAMES = 2; // ~50 ms at 60 FPS
+    private static final long INPUT_POLL_NS = 1_000_000L; // 1000Hz (1ms)
 
+    public static final int DEFAULT_DCD_FRAMES = 0;
+    public static final int DEFAULT_IRS_BUFFER_FRAMES = 0;
 
-    // IMS (Initial Movement System)
+    public record TimedInput(InputAction action, long timestampNs) {}
+
+    // 1000Hz Discrete Action Queue
+    private final ArrayDeque<TimedInput> actionQueue = new ArrayDeque<>();
+
+    // IMS / DCD (Initial Movement System / DAS Cut Delay)
     private int bufferedDirection = 0;
     private long directionPressNs = -1L;
-    private long imsBufferNs = DEFAULT_IMS_BUFFER_FRAMES * NS_PER_FRAME;
+    private long imsBufferNs = DEFAULT_DCD_FRAMES * NS_PER_FRAME;
     private boolean imsConsumed = false;
 
-
     // IRS (Initial Rotation System)
-    private RotationDirection bufferedRotation = RotationDirection.NONE;
     private long rotationPressNs = -1L;
     private long irsBufferNs = DEFAULT_IRS_BUFFER_FRAMES * NS_PER_FRAME;
+    private RotationDirection bufferedRotation = RotationDirection.NONE;
     private boolean irsConsumed = false;
 
     // IHS (Initial Hold System)
     private boolean bufferedHold = false;
 
-    /* ========================== IMS ========================== */
+    /* ========================== 1000Hz ACTION QUEUE ========================== */
+
+    public void enqueueAction(InputAction action, long nowNs) {
+        if (action == null) return;
+        long quantizedNs = (nowNs / INPUT_POLL_NS) * INPUT_POLL_NS;
+        actionQueue.addLast(new TimedInput(action, quantizedNs));
+    }
+
+    public TimedInput pollActionUpTo(long simNowNs) {
+        TimedInput next = actionQueue.peekFirst();
+        if (next != null && next.timestampNs() <= simNowNs) {
+            return actionQueue.pollFirst();
+        }
+        return null;
+    }
+
+    public boolean hasPendingActions() {
+        return !actionQueue.isEmpty();
+    }
+
+    public void clearActionQueue() {
+        actionQueue.clear();
+    }
+
+    /* ========================== IMS / DCD ========================== */
 
     public void setImsBufferFrames(int frames) {
         this.imsBufferNs = Math.max(0, frames) * NS_PER_FRAME;
@@ -38,17 +71,15 @@ public class InputBuffer {
         bufferDirection(dir, System.nanoTime());
     }
 
-    public void bufferDirection(int dir, long now) {
+    public void bufferDirection(int dir, long nowNs) {
         if (dir == 0) {
             clearDirection();
             return;
         }
-        // Ignore OS key-repeat events for the same direction so charge time isn't reset
-        if (dir == bufferedDirection) {
-            return;
-        }
+        if (dir == bufferedDirection) return; // Ignore OS key-repeat events
+
         bufferedDirection = dir;
-        directionPressNs = now;
+        directionPressNs = nowNs;
         imsConsumed = false;
     }
 
@@ -61,14 +92,18 @@ public class InputBuffer {
         return getHeldIMS(System.nanoTime());
     }
 
-    public int getHeldIMS(long now) {
+    public int getHeldIMS(long nowNs) {
         if (bufferedDirection == 0 || imsConsumed || directionPressNs < 0L) {
             return 0;
         }
-        if (now - directionPressNs < imsBufferNs) {
+        if (nowNs - directionPressNs < imsBufferNs) {
             return 0;
         }
         imsConsumed = true;
+        return bufferedDirection;
+    }
+
+    public int getBufferedDirection() {
         return bufferedDirection;
     }
 
@@ -78,35 +113,16 @@ public class InputBuffer {
         imsConsumed = false;
     }
 
-    public int getBufferedDirection() {
-        return bufferedDirection;
-    }
-
     /* ========================== IRS ========================== */
 
-    public void setIrsBufferFrames(int frames) {
-        this.irsBufferNs = Math.max(0, frames) * NS_PER_FRAME;
-    }
-
-    public int getIrsBufferFrames() {
-        return (int) Math.round((double) irsBufferNs / NS_PER_FRAME);
-    }
-
     public void bufferRotation(RotationDirection dir) {
-        bufferRotation(dir, System.nanoTime());
-    }
-
-    public void bufferRotation(RotationDirection dir, long now) {
         if (dir == null || dir == RotationDirection.NONE) {
             clearRotation();
             return;
         }
-        // Ignore OS key-repeat events for the same held direction so charge time isn't reset
-        if (dir == bufferedRotation) {
-            return;
-        }
+        if (dir == bufferedRotation) return; // Ignore OS key-repeat events
+
         bufferedRotation = dir;
-        rotationPressNs = now;
         irsConsumed = false;
     }
 
@@ -116,18 +132,15 @@ public class InputBuffer {
     }
 
     public RotationDirection getHeldIRS() {
-        return getHeldIRS(System.nanoTime());
-    }
-
-    public RotationDirection getHeldIRS(long now) {
-        if (bufferedRotation == RotationDirection.NONE || irsConsumed || rotationPressNs < 0L) {
-            return null;
-        }
-        if (now - rotationPressNs < irsBufferNs) {
+        if (bufferedRotation == RotationDirection.NONE || irsConsumed) {
             return null;
         }
         irsConsumed = true;
         return bufferedRotation;
+    }
+
+    public RotationDirection getHeldIRS(long nowNs) {
+        return getHeldIRS();
     }
 
     public RotationDirection consumeRotation() {
@@ -138,7 +151,6 @@ public class InputBuffer {
 
     public void clearRotation() {
         bufferedRotation = RotationDirection.NONE;
-        rotationPressNs = -1L;
         irsConsumed = false;
     }
 
@@ -159,6 +171,7 @@ public class InputBuffer {
     /* ========================== RESET ========================== */
 
     public void clearAll() {
+        clearActionQueue();
         clearDirection();
         clearRotation();
         clearHold();

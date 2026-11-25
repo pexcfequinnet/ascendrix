@@ -6,61 +6,87 @@ public final class SRSKickTable {
 
     private static final int[][] NO_KICK = {{0, 0}};
 
-    // Pre-inverted lookup tables indexed by (from * 4 + to)
-    private static final int[][][] JLSTZ_TABLE = new int[16][][];
-    private static final int[][][] I_TABLE = new int[16][][];
+    // JLSTZ CW / CCW (Y inverted for downward-increasing board rows)
+    private static final int[][] JLSTZ_0_1 = {{0, 0}, {-1, 0}, {-1, -1}, {0, 2}, {-1, 2}};
+    private static final int[][] JLSTZ_1_2 = {{0, 0}, {1, 0}, {1, 1}, {0, -2}, {1, -2}};
+    private static final int[][] JLSTZ_2_3 = {{0, 0}, {1, 0}, {1, -1}, {0, 2}, {1, 2}};
+    private static final int[][] JLSTZ_3_0 = {{0, 0}, {-1, 0}, {-1, 1}, {0, -2}, {-1, -2}};
 
-    static {
-        for (int i = 0; i < 16; i++) {
-            JLSTZ_TABLE[i] = NO_KICK;
-            I_TABLE[i] = NO_KICK;
-        }
+    private static final int[][] JLSTZ_1_0 = {{0, 0}, {1, 0}, {1, 1}, {0, -2}, {1, -2}};
+    private static final int[][] JLSTZ_2_1 = {{0, 0}, {-1, 0}, {-1, -1}, {0, 2}, {-1, 2}};
+    private static final int[][] JLSTZ_3_2 = {{0, 0}, {-1, 0}, {-1, 1}, {0, -2}, {-1, -2}};
+    private static final int[][] JLSTZ_0_3 = {{0, 0}, {1, 0}, {1, -1}, {0, 2}, {1, 2}};
 
-        // Raw Guideline SRS JLSTZ wall kicks (+Y = up, matching Hard Drop Wiki)
-        // CW
-        register(JLSTZ_TABLE, 0, 1, new int[][]{{0, 0}, {-1, 0}, {-1,  1}, {0, -2}, {-1, -2}});
-        register(JLSTZ_TABLE, 1, 2, new int[][]{{0, 0}, { 1, 0}, { 1, -1}, {0,  2}, { 1,  2}});
-        register(JLSTZ_TABLE, 2, 3, new int[][]{{0, 0}, { 1, 0}, { 1,  1}, {0, -2}, { 1, -2}});
-        register(JLSTZ_TABLE, 3, 0, new int[][]{{0, 0}, {-1, 0}, {-1, -1}, {0,  2}, {-1,  2}});
-        // CCW
-        register(JLSTZ_TABLE, 1, 0, new int[][]{{0, 0}, { 1, 0}, { 1, -1}, {0,  2}, { 1,  2}});
-        register(JLSTZ_TABLE, 2, 1, new int[][]{{0, 0}, {-1, 0}, {-1,  1}, {0, -2}, {-1, -2}});
-        register(JLSTZ_TABLE, 3, 2, new int[][]{{0, 0}, {-1, 0}, {-1, -1}, {0,  2}, {-1,  2}});
-        register(JLSTZ_TABLE, 0, 3, new int[][]{{0, 0}, { 1, 0}, { 1,  1}, {0, -2}, { 1, -2}});
+    // I CW / CCW (Y inverted for downward-increasing board rows)
+    private static final int[][] I_0_1 = {{0, 0}, {-2, 0}, {1, 0}, {-2, 1}, {1, -2}};
+    private static final int[][] I_1_2 = {{0, 0}, {-1, 0}, {2, 0}, {-1, -2}, {2, 1}};
+    private static final int[][] I_2_3 = {{0, 0}, {2, 0}, {-1, 0}, {2, -1}, {-1, 2}};
+    private static final int[][] I_3_0 = {{0, 0}, {1, 0}, {-2, 0}, {1, 2}, {-2, -1}};
 
-        // Raw Guideline SRS I-piece wall kicks (+Y = up, matching Hard Drop Wiki)
-        // CW
-        register(I_TABLE, 0, 1, new int[][]{{0, 0}, {-2, 0}, { 1, 0}, {-2, -1}, { 1,  2}});
-        register(I_TABLE, 1, 2, new int[][]{{0, 0}, {-1, 0}, { 2, 0}, {-1,  2}, { 2, -1}});
-        register(I_TABLE, 2, 3, new int[][]{{0, 0}, { 2, 0}, {-1, 0}, { 2,  1}, {-1, -2}});
-        register(I_TABLE, 3, 0, new int[][]{{0, 0}, { 1, 0}, {-2, 0}, { 1, -2}, {-2,  1}});
-        // CCW
-        register(I_TABLE, 1, 0, new int[][]{{0, 0}, { 2, 0}, {-1, 0}, { 2,  1}, {-1, -2}});
-        register(I_TABLE, 2, 1, new int[][]{{0, 0}, { 1, 0}, {-2, 0}, { 1, -2}, {-2,  1}});
-        register(I_TABLE, 3, 2, new int[][]{{0, 0}, {-2, 0}, { 1, 0}, {-2, -1}, { 1,  2}});
-        register(I_TABLE, 0, 3, new int[][]{{0, 0}, {-1, 0}, { 2, 0}, {-1,  2}, { 2, -1}});
-    }
+    private static final int[][] I_1_0 = {{0, 0}, {2, 0}, {-1, 0}, {2, -1}, {-1, 2}};
+    private static final int[][] I_2_1 = {{0, 0}, {1, 0}, {-2, 0}, {1, 2}, {-2, -1}};
+    private static final int[][] I_3_2 = {{0, 0}, {-2, 0}, {1, 0}, {-2, 1}, {1, -2}};
+    private static final int[][] I_0_3 = {{0, 0}, {-1, 0}, {2, 0}, {-1, -2}, {2, 1}};
+
+    // TETR.IO SRS 180° Kick Table (shared across I, J, L, S, T, Z; Y inverted)
+    private static final int[][] KICK_180_0_2 = {{0, 0}, {0, -1}, {1, -1}, {-1, -1}, {1, 0}, {-1, 0}};
+    private static final int[][] KICK_180_1_3 = {{0, 0}, {1, 0}, {1, -2}, {1, -1}, {0, -2}, {0, -1}};
+    private static final int[][] KICK_180_2_0 = {{0, 0}, {0, 1}, {-1, 1}, {1, 1}, {-1, 0}, {1, 0}};
+    private static final int[][] KICK_180_3_1 = {{0, 0}, {-1, 0}, {-1, -2}, {-1, -1}, {0, -2}, {0, -1}};
 
     private SRSKickTable() {}
 
     public static int[][] getKicks(TetrominoType type, int from, int to) {
-        if (type == TetrominoType.O) {
+        if (type == null || type == TetrominoType.O) {
             return NO_KICK;
         }
-        int index = Math.floorMod(from, 4) * 4 + Math.floorMod(to, 4);
-        return (type == TetrominoType.I) ? I_TABLE[index] : JLSTZ_TABLE[index];
-    }
 
-    private static void register(int[][][] table, int from, int to, int[][] rawKicks) {
-        table[from * 4 + to] = invertY(rawKicks);
-    }
+        int f = Math.floorMod(from, 4);
+        int t = Math.floorMod(to, 4);
 
-    private static int[][] invertY(int[][] raw) {
-        int[][] inverted = new int[raw.length][2];
-        for (int i = 0; i < raw.length; i++) {
-            inverted[i][0] = raw[i][0];
-            inverted[i][1] = -raw[i][1];
+        // 180° transitions
+        if (t == Math.floorMod(f + 2, 4)) {
+            return get180(f);
         }
-        return inverted;
+
+        return (type == TetrominoType.I) ? getI(f, t) : getJLSTZ(f, t);
+    }
+
+    private static int[][] get180(int from) {
+        return switch (from) {
+            case 0 -> KICK_180_0_2;
+            case 1 -> KICK_180_1_3;
+            case 2 -> KICK_180_2_0;
+            case 3 -> KICK_180_3_1;
+            default -> NO_KICK;
+        };
+    }
+
+    private static int[][] getJLSTZ(int from, int to) {
+        if (from == 0 && to == 1) return JLSTZ_0_1;
+        if (from == 1 && to == 2) return JLSTZ_1_2;
+        if (from == 2 && to == 3) return JLSTZ_2_3;
+        if (from == 3 && to == 0) return JLSTZ_3_0;
+
+        if (from == 1 && to == 0) return JLSTZ_1_0;
+        if (from == 2 && to == 1) return JLSTZ_2_1;
+        if (from == 3 && to == 2) return JLSTZ_3_2;
+        if (from == 0 && to == 3) return JLSTZ_0_3;
+
+        return NO_KICK;
+    }
+
+    private static int[][] getI(int from, int to) {
+        if (from == 0 && to == 1) return I_0_1;
+        if (from == 1 && to == 2) return I_1_2;
+        if (from == 2 && to == 3) return I_2_3;
+        if (from == 3 && to == 0) return I_3_0;
+
+        if (from == 1 && to == 0) return I_1_0;
+        if (from == 2 && to == 1) return I_2_1;
+        if (from == 3 && to == 2) return I_3_2;
+        if (from == 0 && to == 3) return I_0_3;
+
+        return NO_KICK;
     }
 }

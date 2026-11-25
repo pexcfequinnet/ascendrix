@@ -65,7 +65,7 @@ public class OverdriveHUDRenderer extends BaseHUDRenderer {
         gc.save();
         int displayLevel = Math.min(hud.getLevel(), OverdriveRuleset.MAX_LEVEL);
         int sectionStart = (displayLevel / 100) * 100;
-        int sectionEnd = Math.max(sectionStart + 1, hud.getNextLevel());
+        int sectionEnd = Math.max(sectionStart, hud.getNextLevel());
         double sectionPercent = (displayLevel >= OverdriveRuleset.MAX_LEVEL)
                 ? 1.0
                 : (double) (displayLevel - sectionStart) / 100.0;

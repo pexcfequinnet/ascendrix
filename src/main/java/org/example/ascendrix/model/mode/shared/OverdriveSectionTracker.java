@@ -21,12 +21,17 @@ public class OverdriveSectionTracker {
             new SectionData(600,  699,  40.0),
             new SectionData(700,  799,  35.0),
             new SectionData(800,  899,  35.0),
-            new SectionData(900,  999,  35.0),
+            new SectionData(900,  999,  30.0),
             new SectionData(1000, 1099, -1.0),
             new SectionData(1100, 1199, -1.0),
             new SectionData(1200, 1299, -1.0),
             new SectionData(1300, 1399, -1.0),
-            new SectionData(1400, 1499, -1.0)
+            new SectionData(1400, 1499, -1.0),
+            new SectionData(1500, 1599, -1.0),
+            new SectionData(1600, 1699, -1.0),
+            new SectionData(1700, 1799, -1.0),
+            new SectionData(1800, 1899, -1.0),
+            new SectionData(1900, 1999, -1.0),
     };
 
     private final boolean[] regrets = new boolean[SECTIONS.length];

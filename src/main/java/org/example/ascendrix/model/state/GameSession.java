@@ -3,6 +3,7 @@ package org.example.ascendrix.model.state;
 import org.example.ascendrix.model.board.Board;
 import org.example.ascendrix.model.board.FadeMap;
 import org.example.ascendrix.model.input.InputBuffer;
+import org.example.ascendrix.model.input.KeyBindingConfig.InputAction;
 import org.example.ascendrix.model.mechanics.ARETimer;
 import org.example.ascendrix.model.mechanics.MovementProcessor;
 import org.example.ascendrix.model.mechanics.rotation.RotationDirection;
@@ -18,6 +19,7 @@ import org.example.ascendrix.model.piece.TetrominoType;
 public class GameSession {
     private static final int SPAWN_X = 3;
     private static final long PERFECT_CLEAR_DURATION_NS = 750_000_000L;
+    private static final long COUNTDOWN_STEP_NS = 1_000_000_000L;
 
     private final Board board = new Board();
     private final TetrominoQueue queue = new TetrominoQueue();
@@ -43,6 +45,7 @@ public class GameSession {
     private GamePhase phaseBeforePause = GamePhase.COUNTDOWN;
     private int countdown = 1;
     private long lastTick = -1L;
+    private long lastInputTick = -1L;
 
     private boolean waitingToSpawn = false;
     private boolean waitingForClearAnim = false;
@@ -60,11 +63,13 @@ public class GameSession {
 
     public void start(long now) {
         phase = GamePhase.COUNTDOWN;
+        phaseBeforePause = GamePhase.COUNTDOWN;
         lastTick = now;
+        lastInputTick = now;
     }
 
     public void pause() {
-        if (phase == GamePhase.PLAYING || phase == GamePhase.COUNTDOWN || phase == GamePhase.ROLL) {
+        if (phase == GamePhase.COUNTDOWN || phase.isPlayable()) {
             phaseBeforePause = phase;
             phase = GamePhase.PAUSED;
             timer.pause();
@@ -72,51 +77,86 @@ public class GameSession {
     }
 
     public void resume(long now) {
-        if (phase == GamePhase.PAUSED) {
-            phase = phaseBeforePause;
-            lastTick = now;
-            if (phase == GamePhase.PLAYING || phase == GamePhase.ROLL) {
-                timer.resume(now);
+        if (phase != GamePhase.PAUSED) {
+            return;
+        }
+        phase = phaseBeforePause;
+        lastTick = now;
+        lastInputTick = now;
+        if (phase.isPlayable()) {
+            timer.resume(now);
+        }
+    }
+
+    /**
+     * 1000Hz (1ms) input & handling tick: drains queued tap actions in chronological order
+     * and updates DAS, ARR, DCD, and SDF at 1ms resolution.
+     */
+    public void stepInput(long nowNs, int horizontalDir, boolean softDropHeld) {
+        if (!phase.isPlayable()) {
+            return;
+        }
+        lastInputTick = nowNs;
+
+        if (!canControlPiece()) {
+            return;
+        }
+
+        InputBuffer.TimedInput event;
+        while ((event = inputBuffer.pollActionUpTo(nowNs)) != null) {
+            applyDiscreteAction(event.action(), nowNs);
+            if (!canControlPiece() || !phase.isPlayable()) {
+                return;
             }
         }
+
+        ruleset.getHandling().update(nowNs, horizontalDir, softDropHeld, this);
     }
 
-    public void update(long now) {
-        update(now, 0, false);
-    }
-
-    public void update(long now, int horizontalDir, boolean softDropHeld) {
+    /**
+     * 60Hz (16.67ms) simulation tick: advances countdown, ruleset timers, board fade,
+     * line-clear animation, ARE spawn delay, gravity, and lock delay.
+     */
+    public void stepSimulation(long nowNs) {
         if (phase == GamePhase.COUNTDOWN) {
-            updateCountdown(now);
+            updateCountdown(nowNs);
             return;
         }
-        if (phase != GamePhase.PLAYING && phase != GamePhase.ROLL) {
+        if (!phase.isPlayable()) {
             return;
         }
 
-        lastTick = now;
+        lastTick = nowNs;
 
-        FadeMap fadeMap = ruleset.getFadeMap();
-        board.setFadeMap(fadeMap);
-        ruleset.update(now, this);
+        board.setFadeMap(ruleset.getFadeMap());
+        ruleset.update(nowNs, this);
 
-        board.updateFade(now);
+        board.updateFade(nowNs);
         if (board.isFading()) {
             return;
         }
 
         if (waitingForClearAnim) {
-            handleClearAnim(now);
+            handleClearAnim(nowNs);
             return;
         }
 
-        handleSpawnDelay(now);
+        handleSpawnDelay(nowNs);
 
         if (!waitingToSpawn && current != null) {
-            ruleset.getHandling().update(now, horizontalDir, softDropHeld, this);
-            ruleset.getGravity().update(now, this);
-            ruleset.getLockDelay().update(now, this);
+            ruleset.getGravity().update(nowNs, this);
+            ruleset.getLockDelay().update(nowNs, this);
         }
+    }
+
+    /** Single-rate fallback when driven outside the dual-rate loop. */
+    public void update(long now) {
+        update(now, 0, false);
+    }
+
+    public void update(long now, int horizontalDir, boolean softDropHeld) {
+        stepInput(now, horizontalDir, softDropHeld);
+        stepSimulation(now);
     }
 
     public void clearGame() {
@@ -128,14 +168,30 @@ public class GameSession {
         if (ruleset.isRollActive()) {
             clearGame();
         } else {
-            phase = GamePhase.GAME_OVER;
-            timer.pause();
+            gameOver();
         }
     }
 
     public void gameOver() {
         phase = GamePhase.GAME_OVER;
         timer.pause();
+    }
+
+    private void applyDiscreteAction(InputAction action, long nowNs) {
+        switch (action) {
+            case LEFT       -> move(-1, nowNs);
+            case RIGHT      -> move(1, nowNs);
+            case ROTATE_CCW -> rotate(RotationDirection.CCW, nowNs);
+            case ROTATE_CW  -> rotate(RotationDirection.CW, nowNs);
+            case ROTATE_180 -> rotate(RotationDirection.FLIP, nowNs);
+            case HOLD       -> hold(nowNs);
+            case HARD_DROP  -> hardDrop(nowNs);
+            case SOFT_DROP  -> {} // Handled continuously by MovementProcessor via softDropHeld
+        }
+    }
+
+    private boolean canControlPiece() {
+        return !waitingToSpawn && !waitingForClearAnim && !board.isFading() && current != null;
     }
 
     /* ========================== SPAWN & HOLD ========================== */
@@ -166,7 +222,14 @@ public class GameSession {
             }
         }
 
-        current = new ActivePiece(type, SPAWN_X, getSpawnYOffset(type));
+        int spawnY = getSpawnYOffset(type);
+        current = new ActivePiece(type, SPAWN_X, spawnY);
+
+        if (!board.canPlace(current.getBlocks(), current.getX(), current.getY())
+                || !placeFromBottomIf20G(spawnY)) {
+            topOut();
+            return;
+        }
 
         // IRS (Initial Rotation System)
         if (ruleset.supportsIRS()) {
@@ -177,17 +240,14 @@ public class GameSession {
         }
 
         // IMS (Initial Movement System)
-        int dir = inputBuffer.getBufferedDirection();
+        boolean movedOnSpawn = false;
+        int dir = inputBuffer.getHeldIMS(now);
         if (dir != 0) {
             move(dir, now);
-            inputBuffer.clearDirection();
+            movedOnSpawn = true;
         }
 
-        if (!board.canPlace(current.getBlocks(), current.getX(), current.getY())) {
-            topOut();
-            return;
-        }
-
+        // Charged DAS carry-over into newly spawned piece
         MovementProcessor movement = ruleset.getHandling();
         if (movement.isDasCharged(now)) {
             int dasDir = movement.getDirection();
@@ -195,7 +255,7 @@ public class GameSession {
                 while (canMove(current.getX() + dasDir, current.getY())) {
                     move(dasDir, now);
                 }
-            } else {
+            } else if (!movedOnSpawn) {
                 move(dasDir, now);
             }
         }
@@ -208,7 +268,7 @@ public class GameSession {
     }
 
     public void hold(long now) {
-        if (waitingToSpawn || waitingForClearAnim || !holdSlot.canHold() || current == null) {
+        if (!canControlPiece() || !holdSlot.canHold()) {
             return;
         }
 
@@ -218,15 +278,48 @@ public class GameSession {
             spawnBlock(now, false);
         } else {
             TetrominoType swapped = holdSlot.swap(currentType);
-            current = new ActivePiece(swapped, SPAWN_X, getSpawnYOffset(swapped));
+            int spawnY = getSpawnYOffset(swapped);
+            current = new ActivePiece(swapped, SPAWN_X, spawnY);
 
-            if (!board.canPlace(current.getBlocks(), current.getX(), current.getY())) {
+            if (!board.canPlace(current.getBlocks(), current.getX(), current.getY())
+                    || !placeFromBottomIf20G(spawnY)) {
                 topOut();
                 return;
             }
             current.markSpawnMovementComplete();
         }
     }
+
+    /**
+     * Places the active piece directly onto its bottom-up landing row when in 20G.
+     * Returns false if the piece cannot legally rest on the board (top-out).
+     */
+    public boolean placeFromBottomIf20G(int spawnY) {
+        if (current == null || !ruleset.getGravity().is20G()) {
+            return true;
+        }
+        int landingY = board.findBottomUpLandingY(current.getBlocks(), current.getX(), spawnY);
+        if (landingY == Integer.MIN_VALUE) {
+            return false;
+        }
+        current.setY(landingY);
+        return true;
+    }
+
+    /**
+     * Snaps the active piece immediately to the bottom-up surface of its current columns
+     * after horizontal shifts, rotations, or mid-piece 20G transitions.
+     */
+    public void snapCurrentToBottomIfNeeded() {
+        if (current == null || !ruleset.getGravity().is20G()) {
+            return;
+        }
+        int landingY = board.findBottomUpLandingY(current.getBlocks(), current.getX(), current.getY());
+        if (landingY != Integer.MIN_VALUE && landingY > current.getY()) {
+            current.setY(landingY);
+        }
+    }
+
     /* ========================== MOVEMENT & ROTATION ========================== */
 
     public void move(int dir) {
@@ -234,9 +327,10 @@ public class GameSession {
     }
 
     public void move(int dir, long now) {
-        if (waitingToSpawn || waitingForClearAnim || board.isFading() || current == null) return;
+        if (!canControlPiece()) return;
         if (canMove(current.getX() + dir, current.getY())) {
             current.moveHorizontal(dir);
+            snapCurrentToBottomIfNeeded();
             notifyMoveOrRotate(now);
         }
     }
@@ -278,11 +372,15 @@ public class GameSession {
         rotate(RotationDirection.CCW, currentNow());
     }
 
-    public void rotate(RotationDirection dir, long now) {
-        if (waitingToSpawn || waitingForClearAnim || board.isFading() || current == null) return;
+    public void rotate180() {
+        rotate(RotationDirection.FLIP, currentNow());
+    }
 
-        boolean rotated = ruleset.getRotationSystem().tryRotate(current, dir, board);
-        if (rotated) {
+    public void rotate(RotationDirection dir, long now) {
+        if (!canControlPiece()) return;
+
+        if (ruleset.getRotationSystem().tryRotate(current, dir, board)) {
+            snapCurrentToBottomIfNeeded();
             notifyMoveOrRotate(now);
             current.onRotated();
         }
@@ -364,13 +462,14 @@ public class GameSession {
             waitingToSpawn = false;
             are.reset();
             ruleset.getHandling().resetDAS();
+            ruleset.getHandling().resetDAS();
             spawnBlock(now);
             ruleset.onPieceSpawned(this);
         }
     }
 
     private void updateCountdown(long now) {
-        if (now - lastTick >= 1_000_000_000L) {
+        if (now - lastTick >= COUNTDOWN_STEP_NS) {
             countdown--;
             lastTick = now;
         }
@@ -384,7 +483,9 @@ public class GameSession {
     }
 
     private long currentNow() {
-        return (lastTick > 0L) ? lastTick : System.nanoTime();
+        if (lastInputTick > 0L) return lastInputTick;
+        if (lastTick > 0L) return lastTick;
+        return System.nanoTime();
     }
 
     /* ========================== BOARD & PIECE QUERIES ========================== */
@@ -411,6 +512,9 @@ public class GameSession {
 
     public int getGhostY() {
         if (current == null) return 0;
+        if (ruleset.getGravity().is20G()) {
+            return current.getY();
+        }
         int y = current.getY();
         while (canMove(current.getX(), y + 1)) {
             y++;
@@ -449,6 +553,7 @@ public class GameSession {
             return (rawValue instanceof Number n) ? n.longValue() : 0L;
         }
     }
+
     public GameResult getResult() {
         long elapsed = timer.getElapsedMs();
         if (ruleset == null) {
@@ -461,23 +566,23 @@ public class GameSession {
 
     /* ========================== GETTERS ========================== */
 
-    public Board getBoard()                     { return board; }
-    public ActivePiece getCurrentPiece()        { return current; }
-    public TetrominoQueue getQueue()            { return queue; }
-    public TetrominoType getHoldPiece()         { return holdSlot.getHeldType(); }
-    public GameMode getMode()                   { return mode; }
-    public ModeRuleset getRuleset()             { return ruleset; }
-    public InputBuffer getInputBuffer()         { return inputBuffer; }
-    public GameTimer getTimer()                 { return timer; }
-    public GamePhase getPhase()                 { return phase; }
-    public int getCountdown()                   { return countdown; }
-    public int getTotalLines()                  { return totalLines; }
-    public boolean isSpawning()                 { return waitingToSpawn; }
-    public boolean isWaitingForClearAnim()      { return waitingForClearAnim; }
-    public boolean isPaused()                   { return phase == GamePhase.PAUSED; }
-    public boolean isGameOver()                 { return phase == GamePhase.GAME_OVER; }
-    public boolean isCleared()                  { return phase == GamePhase.CLEARED; }
-    public int[][] getLastLockedBlocks()        { return lastLockedBlocks; }
-    public int getLastLockedX()                 { return lastLockedX; }
-    public int getLastLockedY()                 { return lastLockedY; }
+    public Board getBoard()                { return board; }
+    public ActivePiece getCurrentPiece()   { return current; }
+    public TetrominoQueue getQueue()       { return queue; }
+    public TetrominoType getHoldPiece()    { return holdSlot.getHeldType(); }
+    public GameMode getMode()              { return mode; }
+    public ModeRuleset getRuleset()        { return ruleset; }
+    public InputBuffer getInputBuffer()    { return inputBuffer; }
+    public GameTimer getTimer()            { return timer; }
+    public GamePhase getPhase()            { return phase; }
+    public int getCountdown()              { return countdown; }
+    public int getTotalLines()             { return totalLines; }
+    public boolean isSpawning()            { return waitingToSpawn; }
+    public boolean isWaitingForClearAnim() { return waitingForClearAnim; }
+    public boolean isPaused()              { return phase == GamePhase.PAUSED; }
+    public boolean isGameOver()            { return phase == GamePhase.GAME_OVER; }
+    public boolean isCleared()             { return phase == GamePhase.CLEARED; }
+    public int[][] getLastLockedBlocks()   { return lastLockedBlocks; }
+    public int getLastLockedX()            { return lastLockedX; }
+    public int getLastLockedY()            { return lastLockedY; }
 }

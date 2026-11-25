@@ -5,6 +5,7 @@ import org.example.ascendrix.model.state.GameSession;
 public class GravityModel {
 
     private static final double FRAME_NS = 1_000_000_000.0 / 60.0;
+    private static final double TWENTY_G_THRESHOLD = 19.999; // Covers 20.0G (833,333 ns) and 1L ns
     private static final int MAX_STEPS_PER_TICK = 25; // Covers full board height + hidden buffer
 
     private long lastFallTime = -1L;
@@ -19,6 +20,10 @@ public class GravityModel {
         GravityModel model = new GravityModel(1.0 / 60.0);
         model.setFallNs(fallNs);
         return model;
+    }
+
+    public boolean is20G() {
+        return g >= TWENTY_G_THRESHOLD;
     }
 
     public void setG(double g) {
@@ -47,6 +52,12 @@ public class GravityModel {
 
     public void update(long now, GameSession session) {
         if (fallNs <= 0L) return;
+
+        // In 20G, pieces spawn and snap directly from the bottom—no per-frame drop loop needed.
+        if (is20G()) {
+            session.snapCurrentToBottomIfNeeded();
+            return;
+        }
 
         if (lastFallTime == -1L) {
             lastFallTime = now;

@@ -1,6 +1,6 @@
 package org.example.ascendrix.model.mode.shared;
 
-public class SectionTracker {
+public class MasterSectionTracker {
 
     public enum SectionResult {
         COOL,

@@ -5,12 +5,18 @@ import org.example.ascendrix.model.state.GameSession;
 
 public class GarbageSpawner {
 
-    private long lastGarbageTime = -1L;
+    public static final long PAUSED = -1L;
 
-    public void update(long now, int level, GameSession session) {
-        long interval = ModeTables.getOverdriveGarbageInterval(level);
-        if (interval == ModeTables.OVERDRIVE_GARBAGE_PAUSED) {
-            lastGarbageTime = -1L; // Reset timer while garbage is paused
+    private long lastGarbageTime = -1L;
+    private int piecesSinceGarbage = 0;
+
+    /**
+     * Time-driven garbage spawning (e.g., Overdrive).
+     * Pass {@link #PAUSED} (or any value {@code <= 0}) to pause and reset the timer.
+     */
+    public void update(long now, long intervalNs, GameSession session) {
+        if (intervalNs <= 0L) {
+            lastGarbageTime = -1L;
             return;
         }
 
@@ -19,13 +25,34 @@ public class GarbageSpawner {
             return;
         }
 
-        if (now - lastGarbageTime >= interval) {
+        if (now - lastGarbageTime >= intervalNs) {
             spawnGarbage(session);
             lastGarbageTime = now;
         }
     }
 
-    private void spawnGarbage(GameSession session) {
+    /**
+     * Piece-count-driven garbage spawning (e.g., Master 1.1 / Shirase-style modes).
+     * Pass {@code <= 0} to pause and reset the piece counter.
+     */
+    public void onPiecePlaced(int pieceInterval, GameSession session) {
+        if (pieceInterval <= 0) {
+            piecesSinceGarbage = 0;
+            return;
+        }
+
+        piecesSinceGarbage++;
+        if (piecesSinceGarbage >= pieceInterval) {
+            spawnGarbage(session);
+            piecesSinceGarbage = 0;
+        }
+    }
+
+    /**
+     * Pushes the stack up by one row and fills the bottom row with garbage,
+     * preserving empty columns from the previous bottom row as gaps.
+     */
+    public void spawnGarbage(GameSession session) {
         Board board = session.getBoard();
         int bottomRow = Board.ROWS - 1;
 
@@ -50,5 +77,6 @@ public class GarbageSpawner {
 
     public void reset() {
         lastGarbageTime = -1L;
+        piecesSinceGarbage = 0;
     }
 }

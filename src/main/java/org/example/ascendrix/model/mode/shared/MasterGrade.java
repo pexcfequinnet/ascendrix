@@ -28,7 +28,7 @@ public enum MasterGrade implements RollPhase.GradeScale {
     m7("m7", 2.00),
     m8("m8", 2.10),
     m9("m9", 2.20),
-    M("Master", 1.50);
+    M("Master", 2.40);
 
     public final String label;
     public final double threshold;

@@ -14,6 +14,7 @@ public class KeyBindingConfig {
         HARD_DROP,
         ROTATE_CCW,
         ROTATE_CW,
+        ROTATE_180,
         HOLD
     }
 
@@ -34,6 +35,7 @@ public class KeyBindingConfig {
         bind(InputAction.HARD_DROP, "W");
         bind(InputAction.ROTATE_CCW, "J");
         bind(InputAction.ROTATE_CW, "L");
+        bind(InputAction.ROTATE_180, "K");
         bind(InputAction.HOLD, "SHIFT");
     }
 

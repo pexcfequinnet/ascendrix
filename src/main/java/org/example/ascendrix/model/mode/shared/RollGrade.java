@@ -3,11 +3,11 @@ package org.example.ascendrix.model.mode.shared;
 import java.util.Optional;
 
 public enum RollGrade implements RollPhase.GradeScale {
-    MK("MasterK", 1.2),
-    MV("MasterV", 1.2),
-    MO("MasterO", 1.2),
-    MM("MasterM", 2.4),
-    GM("Grand Master", 3.6);
+    MK("MasterK", 1.4),
+    MV("MasterV", 1.8),
+    MO("MasterO", 2.4),
+    MM("MasterM", 3.6),
+    GM("Grand Master", 4.8);
 
     public final String label;
     public final double threshold;

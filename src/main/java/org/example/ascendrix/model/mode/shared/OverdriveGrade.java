@@ -17,7 +17,12 @@ public enum OverdriveGrade {
     S13("S13"),
     S14("S14"),
     S15("S15"),
-    S15_PLUS("S15+");
+    S16("S16"),
+    S17("S17"),
+    S18("S18"),
+    S19("S19"),
+    S20("S20"),
+    S20_PLUS("S20+");
 
     public final String label;
 
@@ -30,7 +35,7 @@ public enum OverdriveGrade {
     }
 
     public boolean isMax() {
-        return this == S15_PLUS;
+        return this == S20_PLUS;
     }
 
     public OverdriveGrade next() {

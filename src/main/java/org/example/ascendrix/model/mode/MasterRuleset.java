@@ -16,7 +16,7 @@ import org.example.ascendrix.model.mode.shared.MasterGrade;
 import org.example.ascendrix.model.mode.shared.ModeTables;
 import org.example.ascendrix.model.mode.shared.RollGrade;
 import org.example.ascendrix.model.mode.shared.RollPhase;
-import org.example.ascendrix.model.mode.shared.SectionTracker;
+import org.example.ascendrix.model.mode.shared.MasterSectionTracker;
 import org.example.ascendrix.model.piece.TetrominoQueue;
 import org.example.ascendrix.model.state.GameSession;
 import org.example.ascendrix.model.state.GameSession.GameResult;
@@ -28,10 +28,10 @@ public class MasterRuleset extends BaseModeRuleset {
     private static final long ROLL_DURATION_NS = 60_000_000_000L;
     private static final long BANNER_DISPLAY_DURATION_NS = 3_000_000_000L;
     private static final long BANNER_FADE_WINDOW_NS = 500_000_000L;
-
+    private static final double NORMAL_CLEAR_BONUS = 1.0; // Adjust to your desired bonus
     private final HandlingConfig handlingConfig;
     private final GradeTracker gradeTracker = new GradeTracker();
-    private final SectionTracker sectionTracker = new SectionTracker();
+    private final MasterSectionTracker sectionTracker = new MasterSectionTracker();
     private final FadeMap fadeMap = new FadeMap();
 
     private int currentSpdLv = 1;
@@ -180,16 +180,16 @@ public class MasterRuleset extends BaseModeRuleset {
         // Evaluate COOL / REGRET at x80 mark once per section
         if (level % 100 >= 80 && lastEvaluatedSection < currentSection) {
             lastEvaluatedSection = currentSection;
-            SectionTracker.SectionResult result = sectionTracker.evaluateSection(currentSection, elapsedSeconds);
+            MasterSectionTracker.SectionResult result = sectionTracker.evaluateSection(currentSection, elapsedSeconds);
 
-            if (result == SectionTracker.SectionResult.COOL) {
+            if (result == MasterSectionTracker.SectionResult.COOL) {
                 coolDisplayTime = now;
                 if (gravityAtFloor) {
                     speedLevelStartLevel = level;
                     gravityAtFloor = false;
                     gravityAtCeiling = true;
                 }
-            } else if (result == SectionTracker.SectionResult.REGRET) {
+            } else if (result == MasterSectionTracker.SectionResult.REGRET) {
                 regretDisplayTime = now;
                 gradeTracker.applyRegret();
                 currentSpdLv = Math.max(1, currentSpdLv - 1);
@@ -257,6 +257,7 @@ public class MasterRuleset extends BaseModeRuleset {
             case 2 -> 900_000_000L;
             case 3 -> 600_000_000L;
             case 4 -> 350_000_000L;
+            case 5 -> 300_000_000L;
             default -> 1_150_000_000L;
         };
     }
@@ -269,14 +270,21 @@ public class MasterRuleset extends BaseModeRuleset {
         rollTriggered = true;
         rollStartTime = now;
 
+        // 1. Award the Level 999 clear bonus while still in NORMAL phase
+        gradeTracker.addGradeValue(NORMAL_CLEAR_BONUS);
+
+        // 2. Check Invisible Roll requirements AFTER the bonus is applied
         RollPhase newPhase = sectionTracker.meetsInvisibleRequirements(
                 elapsedSeconds,
                 gradeTracker.getCurrentGrade()
         ) ? RollPhase.INVISIBLE : RollPhase.FADING;
 
+        // 3. Carry any overflow past M's 2.40 bar (33.90 total) into the Roll
+        double overflow = gradeTracker.getGradeOverflow();
+
         session.getTimer().pause();
         masterRollPhase = newPhase;
-        gradeTracker.setPhase(newPhase, 0.0);
+        gradeTracker.setPhase(newPhase, overflow);
         fadeMap.triggerBoardFade(Board.ROWS, newPhase, now);
     }
 

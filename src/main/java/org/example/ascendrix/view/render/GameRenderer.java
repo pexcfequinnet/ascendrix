@@ -104,6 +104,7 @@ public class GameRenderer extends Canvas {
         gc.fillRect(OFFSET_X, 0, Board.COLS * TILE, getHeight());
 
         boolean hidden = (ctx != null && ctx.invisible);
+        boolean hasFadeMap = (board.getFadeMap() != null);
 
         for (int y = HIDDEN_ROWS; y < Board.ROWS; y++) {
             int screenY = (y - HIDDEN_ROWS) * TILE + TOP_PANEL;
@@ -112,7 +113,7 @@ public class GameRenderer extends Canvas {
                 if (board.isGarbageCell(y, x)) {
                     gc.setFill(GARBAGE_COLOR);
                     gc.fillRect(OFFSET_X + x * TILE, screenY, TILE, TILE);
-                } else if (!hidden && board.getCell(y, x) != null) {
+                } else if ((!hidden || hasFadeMap) && board.getCell(y, x) != null) {
                     double alpha = (ctx != null) ? ctx.getAlpha(x, y) : 1.0;
                     if (alpha > 0) {
                         gc.setGlobalAlpha(alpha);
@@ -133,7 +134,7 @@ public class GameRenderer extends Canvas {
     public void renderCurrentPiece(ActivePiece current, boolean decolor) {
         if (current == null) return;
         GraphicsContext gc = getGraphicsContext2D();
-        gc.setFill(decolor ? Color.PURPLE : getPieceColor(current.getType()));
+        gc.setFill(decolor ? BONE_COLOR : getPieceColor(current.getType()));
 
         for (int[] p : current.getBlocks()) {
             int screenY = current.getY() + p[1] - HIDDEN_ROWS;
@@ -148,7 +149,7 @@ public class GameRenderer extends Canvas {
         if (current == null) return;
         GraphicsContext gc = getGraphicsContext2D();
         gc.setGlobalAlpha(0.35);
-        gc.setFill(decolor ? Color.PURPLE : getPieceColor(current.getType()));
+        gc.setFill(decolor ? BONE_COLOR : getPieceColor(current.getType()));
 
         for (int[] p : current.getBlocks()) {
             int screenY = ghostY + p[1] - HIDDEN_ROWS;
@@ -177,7 +178,7 @@ public class GameRenderer extends Canvas {
 
         for (int i = 0; i < preview.size(); i++) {
             TetrominoType type = preview.get(i);
-            gc.setFill(decolor ? Color.PURPLE : getPieceColor(type));
+            gc.setFill(decolor ? BONE_COLOR : getPieceColor(type));
             int offsetY = baseY + i * 100;
 
             int[][] shape = type.blocks;
@@ -219,7 +220,7 @@ public class GameRenderer extends Canvas {
             minY = Math.min(minY, p[1]);
         }
 
-        gc.setFill(decolor ? Color.PURPLE : getPieceColor(hold));
+        gc.setFill(decolor ? BONE_COLOR : getPieceColor(hold));
         for (int[] p : shape) {
             int x = baseX + (p[0] - minX) * miniTile;
             int y = baseY + (p[1] - minY) * miniTile;

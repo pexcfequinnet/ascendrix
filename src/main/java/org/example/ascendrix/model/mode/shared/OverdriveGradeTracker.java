@@ -6,13 +6,15 @@ public class OverdriveGradeTracker {
     private boolean rollCleared = false;
 
     public void onSectionPass() {
-        currentGrade = currentGrade.next();
+        if (currentGrade.ordinal() < OverdriveGrade.S20.ordinal()) {
+            currentGrade = currentGrade.next();
+        }
     }
 
     public void onRollCleared() {
         rollCleared = true;
-        if (currentGrade == OverdriveGrade.S15) {
-            currentGrade = OverdriveGrade.S15_PLUS;
+        if (currentGrade == OverdriveGrade.S20) {
+            currentGrade = OverdriveGrade.S20_PLUS;
         }
     }
 
