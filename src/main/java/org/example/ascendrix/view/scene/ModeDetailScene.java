@@ -16,7 +16,6 @@ import org.example.ascendrix.model.mechanics.HandlingConfig;
 import org.example.ascendrix.model.mode.GameMode;
 import org.example.ascendrix.model.progression.ScoreManager;
 import org.example.ascendrix.model.progression.ScoreRecord;
-import org.example.ascendrix.view.render.BaseHUDRenderer;
 
 import java.util.List;
 import java.util.Locale;
@@ -45,10 +44,10 @@ public class ModeDetailScene {
     private final Scene scene;
 
     public ModeDetailScene(SceneManager manager, GameMode mode) {
-        String themeColor = getModeColor(mode);
+        String themeColor = mode.getAccentColor();
 
         // 1. Mode Title
-        Label titleLabel = new Label(mode.name() + " MODE");
+        Label titleLabel = new Label(mode.getDisplayName() + " MODE");
         titleLabel.setStyle(
                 "-fx-font-family: 'Monospaced', 'Courier New', monospace; " +
                         "-fx-font-size: 36px; " +
@@ -67,16 +66,13 @@ public class ModeDetailScene {
 
         if (mode == GameMode.SPRINT) {
             buildSprintHandlingControls(configBox, manager, themeColor);
-        } else if (mode == GameMode.ULTRA) {
-            configBox.getChildren().addAll(
-                    createInfoLabel("Time Limit: 02:00.00"),
-                    createInfoLabel("DAS: 7.5F (125 ms)"),
-                    createInfoLabel("ARR: 1.2F (20 ms)"),
-                    createInfoLabel("SDF: 0.6F (10 ms)")
-            );
         } else {
+            if (mode == GameMode.MASTER_11 || mode == GameMode.OVERDRIVE) {
+                configBox.getChildren().add(createInfoLabel("Start Level: 0"));
+            } else if (mode != GameMode.ULTRA) {
+                configBox.getChildren().add(createInfoLabel("Start Level: 1"));
+            }
             configBox.getChildren().addAll(
-                    createInfoLabel("Starting Level: 1"),
                     createInfoLabel("DAS: Auto"),
                     createInfoLabel("ARR: Auto")
             );
@@ -102,17 +98,7 @@ public class ModeDetailScene {
             for (int i = 0; i < LEADERBOARD_SLOTS; i++) {
                 if (i < topScores.size()) {
                     ScoreRecord record = topScores.get(i);
-                    long elapsedMs = (record.getElapsedMs() > 0L)
-                            ? record.getElapsedMs()
-                            : (mode == GameMode.SPRINT ? record.getSortValue() : 0L);
-                    String timeStr = BaseHUDRenderer.formatTime(elapsedMs);
-                    String statText = (mode == GameMode.SPRINT
-                            || record.getDisplayValue() == null
-                            || record.getDisplayValue().isBlank())
-                            ? timeStr
-                            : record.getDisplayValue() + " (" + timeStr + ")";
-
-                    String displayText = String.format("%2d. %s - %s", (i + 1), statText, record.getPlayerName());
+                    String displayText = String.format("%2d. %s - %s", (i + 1), record.getDisplayValue(), record.getPlayerName());
                     scoreBox.getChildren().add(createInfoLabel(displayText));
                 } else {
                     scoreBox.getChildren().add(createInfoLabel(String.format("%2d. ---", (i + 1))));
@@ -362,16 +348,6 @@ public class ModeDetailScene {
     }
 
     /* ========================== HELPERS ========================== */
-
-    private String getModeColor(GameMode mode) {
-        return switch (mode) {
-            case SPRINT    -> "#00C8C8";
-            case ULTRA     -> "#FFA726";
-            case MARATHON  -> "#66BB6A";
-            case MASTER    -> "#42A5F5";
-            case OVERDRIVE -> "#EF5350";
-        };
-    }
 
     private Label createInfoLabel(String text) {
         Label lbl = new Label(text);

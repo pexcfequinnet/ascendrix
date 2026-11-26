@@ -5,6 +5,7 @@ public enum GameMode {
     ULTRA("ULTRA", "#FFA726", false),
     MARATHON("MARATHON", "#66BB6A", true),
     MASTER("MASTER", "#42A5F5", false),
+    MASTER_11("MASTER 1.1", "#AB47BC", false),
     OVERDRIVE("OVERDRIVE", "#EF5350", false);
 
     private final String displayName;

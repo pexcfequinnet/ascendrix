@@ -6,8 +6,8 @@ import org.example.ascendrix.model.mechanics.HandlingConfig;
 
 public final class ModeTables {
 
-    private static final double SECTION_LEVEL_SPAN = 300.0;
-    private static final long INSTANT_20G_FALL_NS  = 1L;
+    private static final double MASTER_SECTION_LEVEL_SPAN = 300.0;
+    private static final long INSTANT_20G_FALL_NS         = 1L;
 
     private ModeTables() {
         // Utility class for mode speed/timing tables
@@ -21,9 +21,15 @@ public final class ModeTables {
         return Math.round(seconds * 1_000_000_000.0);
     }
 
-    /* ========================== MASTER 1.0 ARE TABLE ========================== */
+    /* ========================== SHARED RECORD TYPES ========================== */
 
     public record AREEntry(int speedLevel, long spawnNs, long lineClearNs, long clearAnimNs) {}
+
+    public record HandlingEntry(int speedLevel, long dasNs, long arrNs) {}
+
+    public record FadeEntry(int minLevel, long delayNs, long durationNs) {}
+
+    /* ========================== MASTER 1.0 ARE TABLE ========================== */
 
     private static final AREEntry[] MASTER_ARE_TABLE = {
             new AREEntry(1, framesToNs(20), framesToNs(18), framesToNs(22)), // Speed Lv 1
@@ -73,7 +79,7 @@ public final class ModeTables {
 
     public static long getMasterGravity(int speedLevel, int levelWithinSpeedLevel) {
         long[] entry = MASTER_GRAVITY_TABLE[Math.clamp(speedLevel - 1, 0, MASTER_GRAVITY_TABLE.length - 1)];
-        double t = Math.clamp(levelWithinSpeedLevel / SECTION_LEVEL_SPAN, 0.0, 1.0);
+        double t = Math.clamp(levelWithinSpeedLevel / MASTER_SECTION_LEVEL_SPAN, 0.0, 1.0);
         return (long) (entry[0] + t * (entry[1] - entry[0]));
     }
 
@@ -102,8 +108,6 @@ public final class ModeTables {
 
     /* ========================== MASTER 1.0 HANDLING TABLE ========================== */
 
-    public record HandlingEntry(int speedLevel, long dasNs, long arrNs) {}
-
     private static final HandlingEntry[] MASTER_HANDLING_TABLE = {
             new HandlingEntry(1, framesToNs(12),  framesToNs(1)),    // Speed Lv 1
             new HandlingEntry(2, framesToNs(9),   framesToNs(0.75)), // Speed Lv 2
@@ -126,6 +130,132 @@ public final class ModeTables {
         HandlingEntry entry = getMasterHandling(speedLevel);
         config.setDasNs(entry.dasNs());
         config.setArrNs(entry.arrNs());
+    }
+
+    /* ========================== MASTER 1.1 SPEED TIERS ========================== */
+
+    public static int getMaster11SpeedLevel(int level) {
+        if (level >= 1500) return 7; // Last Roll
+        if (level >= 1200) return 6; // 1200-1499
+        if (level >= 1000) return 5; // 1000-1199
+        if (level >= 700)  return 4; // 700-999
+        if (level >= 500)  return 3; // 500-699
+        if (level >= 300)  return 2; // 300-499
+        return 1;                    // 0-299
+    }
+
+    /* ========================== MASTER 1.1 ARE TABLE ========================== */
+
+    private static final AREEntry[] MASTER_11_ARE_TABLE = {
+            new AREEntry(1, framesToNs(16), framesToNs(12),  framesToNs(14)),  // Lv 1 (0-299)
+            new AREEntry(2, framesToNs(14), framesToNs(9),   framesToNs(11)),  // Lv 2 (300-499)
+            new AREEntry(3, framesToNs(12), framesToNs(6),   framesToNs(8)),   // Lv 3 (500-699)
+            new AREEntry(4, framesToNs(10), framesToNs(4.5), framesToNs(6)),   // Lv 4 (700-999)
+            new AREEntry(5, framesToNs(8),  framesToNs(3.5), framesToNs(4.5)), // Lv 5 (1000-1199)
+            new AREEntry(6, framesToNs(6),  framesToNs(2.5), framesToNs(3)),   // Lv 6 (1200-1499)
+            new AREEntry(7, framesToNs(6),  framesToNs(1.5), framesToNs(2))    // Lv 7 (1500 Roll)
+    };
+
+    public static AREEntry getMaster11ARE(int speedLevel) {
+        AREEntry result = MASTER_11_ARE_TABLE[0];
+        for (AREEntry entry : MASTER_11_ARE_TABLE) {
+            if (speedLevel >= entry.speedLevel()) {
+                result = entry;
+            }
+        }
+        return result;
+    }
+
+    public static long getMaster11SpawnDelay(int speedLevel) {
+        return getMaster11ARE(speedLevel).spawnNs();
+    }
+
+    public static long getMaster11LineClearDelay(int speedLevel) {
+        return getMaster11ARE(speedLevel).lineClearNs();
+    }
+
+    public static long getMaster11ClearAnimDelay(int speedLevel) {
+        return getMaster11ARE(speedLevel).clearAnimNs();
+    }
+
+    public static void applyMaster11ARE(ARETimer are, int speedLevel) {
+        AREEntry entry = getMaster11ARE(speedLevel);
+        are.setSpawnDelayNs(entry.spawnNs());
+        are.setLineClearDelayNs(entry.lineClearNs());
+        are.setClearAnimNs(entry.clearAnimNs());
+    }
+
+    /* ========================== MASTER 1.1 HANDLING TABLE ========================== */
+
+    private static final HandlingEntry[] MASTER_11_HANDLING_TABLE = {
+            new HandlingEntry(1, framesToNs(10),  framesToNs(1.0)),  // Lv 1 (0-299)
+            new HandlingEntry(2, framesToNs(8.5), framesToNs(0.75)), // Lv 2 (300-499)
+            new HandlingEntry(3, framesToNs(7.0), framesToNs(0.5)),  // Lv 3 (500-699)
+            new HandlingEntry(4, framesToNs(6.0), framesToNs(0.5)),  // Lv 4 (700-999)
+            new HandlingEntry(5, framesToNs(5.5), framesToNs(0.35)), // Lv 5 (1000-1199)
+            new HandlingEntry(6, framesToNs(5.0), framesToNs(0.25)), // Lv 6 (1200-1499)
+            new HandlingEntry(7, framesToNs(4.5), framesToNs(0.25))  // Lv 7 (1500 Roll)
+    };
+
+    public static HandlingEntry getMaster11Handling(int speedLevel) {
+        HandlingEntry result = MASTER_11_HANDLING_TABLE[0];
+        for (HandlingEntry entry : MASTER_11_HANDLING_TABLE) {
+            if (speedLevel >= entry.speedLevel()) {
+                result = entry;
+            }
+        }
+        return result;
+    }
+
+    public static void applyMaster11Handling(HandlingConfig config, int speedLevel) {
+        if (config == null) return;
+        HandlingEntry entry = getMaster11Handling(speedLevel);
+        config.setDasNs(entry.dasNs());
+        config.setArrNs(entry.arrNs());
+    }
+
+    /* ========================== MASTER 1.1 GRAVITY, LOCK & GARBAGE ========================== */
+
+    public static void applyMaster11Gravity(GravityModel gravity, int level) {
+        if (gravity == null) return;
+        gravity.setG(20.0);
+    }
+
+    public static long getMaster11LockDelay(int speedLevel) {
+        return switch (speedLevel) {
+            case 1  -> 650_000_000L; // 0-299
+            case 2  -> 550_000_000L; // 300-499
+            case 3  -> 450_000_000L; // 500-699
+            case 4  -> 375_000_000L; // 700-999
+            case 5  -> 300_000_000L; // 1000-1199
+            case 6  -> 250_000_000L; // 1200-1499
+            default -> 200_000_000L; // 1500+ Roll
+        };
+    }
+
+    public static long getMaster11GarbageInterval(int level) {
+        // Overdrive Lite: light garbage only in 500-999, paused before 500 and during 1000+
+        if (level >= 1000) return GarbageSpawner.PAUSED;
+        if (level >= 700)  return secondsToNs(4.0);
+        if (level >= 500)  return secondsToNs(6.0);
+        return GarbageSpawner.PAUSED;
+    }
+
+    /* ========================== MASTER 1.1 REGRET TABLE ========================== */
+
+    public static final long MASTER_11_NO_REGRET_LIMIT = -1L;
+
+    public static long getMaster11RegretLimit(int sectionStart) {
+        if (sectionStart >= 1000) return MASTER_11_NO_REGRET_LIMIT;
+        if (sectionStart >= 700)  return secondsToNs(38);
+        if (sectionStart >= 500)  return secondsToNs(45);
+        if (sectionStart >= 300)  return secondsToNs(53);
+        return secondsToNs(60); // 0-299
+    }
+
+    public static double getMaster11RegretLimitSeconds(int sectionStart) {
+        long limitNs = getMaster11RegretLimit(sectionStart);
+        return (limitNs < 0L) ? -1.0 : limitNs / 1_000_000_000.0;
     }
 
     /* ========================== OVERDRIVE ARE TABLE ========================== */
@@ -209,9 +339,6 @@ public final class ModeTables {
         if (gravity == null) return;
         gravity.setG(20.0);
     }
-
-    // Configurable per-section fading schedule for 1500-1999 (each section shorter than the last)
-    public record FadeEntry(int minLevel, long delayNs, long durationNs) {}
 
     private static final FadeEntry[] OVERDRIVE_FADE_TABLE = {
             new FadeEntry(1500, secondsToNs(3.0), secondsToNs(0.6)), // 1500-1599 (15e)

@@ -22,6 +22,7 @@ public final class ModeFactory {
             case ULTRA     -> UltraRuleset.create();
             case MARATHON  -> MarathonRuleset.create(playerHandling);
             case MASTER    -> MasterRuleset.create();
+            case MASTER_11 -> Master11Ruleset.create();
             case OVERDRIVE -> OverdriveRuleset.create();
         };
     }

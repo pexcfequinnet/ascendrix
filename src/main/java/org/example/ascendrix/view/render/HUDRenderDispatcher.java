@@ -17,6 +17,7 @@ public class HUDRenderDispatcher {
         renderers.put(GameMode.ULTRA, new UltraHUDRenderer());
         renderers.put(GameMode.MARATHON, new MarathonHUDRenderer());
         renderers.put(GameMode.MASTER, new MasterHUDRenderer());
+        renderers.put(GameMode.MASTER_11, new Master11HUDRenderer());
         renderers.put(GameMode.OVERDRIVE, new OverdriveHUDRenderer());
     }
 

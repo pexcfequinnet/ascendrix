@@ -6,14 +6,17 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 import org.example.ascendrix.model.mode.ModeRuleset;
+import org.example.ascendrix.model.mode.SprintRuleset;
 import org.example.ascendrix.model.state.GameTimer;
 import org.example.ascendrix.model.state.HUDState;
+
+import java.util.Locale;
 
 public class SprintHUDRenderer extends BaseHUDRenderer {
 
     private static final int STATS_ANCHOR_X = 300;
     private static final int RIGHT_X = 750;
-    private static final int START_Y = 600;
+    private static final int START_Y = 560;
     private static final int SPACING = 35;
 
     @Override
@@ -53,11 +56,14 @@ public class SprintHUDRenderer extends BaseHUDRenderer {
         }
         gc.restore();
 
-        // Sprint right panel: Elapsed Clock
+        // Sprint right panel: Elapsed Clock + PPS
         long elapsedMs = (timer != null) ? timer.getElapsedMs(now) : hud.getTimeMs();
+        int piecesPlaced = (ruleset instanceof SprintRuleset sprint) ? sprint.getPiecesPlaced() : 0;
+        double pps = (elapsedMs > 0L) ? (piecesPlaced * 1000.0) / elapsedMs : 0.0;
 
         gc.save();
         gc.setTextAlign(TextAlignment.LEFT);
+
         gc.setFill(Color.LIGHTGRAY);
         gc.setFont(Font.font("System", FontWeight.BOLD, 22));
         gc.fillText("TIME", RIGHT_X, START_Y);
@@ -65,6 +71,16 @@ public class SprintHUDRenderer extends BaseHUDRenderer {
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font("Monospace", FontWeight.BOLD, 36));
         gc.fillText(formatTime(elapsedMs), RIGHT_X, START_Y + SPACING + 10);
+
+        int ppsY = START_Y + SPACING + 55;
+        gc.setFill(Color.LIGHTGRAY);
+        gc.setFont(Font.font("System", FontWeight.BOLD, 18));
+        gc.fillText("PPS", RIGHT_X, ppsY);
+
+        gc.setFill(Color.web("#00C8C8"));
+        gc.setFont(Font.font("Monospace", FontWeight.BOLD, 28));
+        gc.fillText(String.format(Locale.US, "%.2f", pps), RIGHT_X, ppsY + 32);
+
         gc.restore();
     }
 }

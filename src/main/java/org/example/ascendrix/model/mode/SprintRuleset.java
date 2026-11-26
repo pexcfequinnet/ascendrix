@@ -26,7 +26,7 @@ public class SprintRuleset extends BaseModeRuleset {
     private int b2bStreak = 0;
     private long finalTimeMs = 0L;
     private long lastNowNs = 0L;
-
+    private int piecesPlaced = 0;
     private SprintRuleset(int targetLines,
                           MovementProcessor handling,
                           GravityModel gravity,
@@ -100,6 +100,15 @@ public class SprintRuleset extends BaseModeRuleset {
             this.finalTimeMs = elapsedMs;
             session.clearGame();
         }
+    }
+
+    @Override
+    public void onPiecePlaced(GameSession session) {
+        piecesPlaced++;
+    }
+
+    public int getPiecesPlaced() {
+        return piecesPlaced;
     }
 
     /* ========================== CAPABILITIES & RESULT ========================== */

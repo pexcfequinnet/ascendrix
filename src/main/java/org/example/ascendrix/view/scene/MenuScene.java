@@ -38,7 +38,7 @@ public class MenuScene {
                 "                           `---`    `----'    '---'        '---'        `---'             `---'     `--`  "
         );
 
-        // Use Text + Java's logical "Monospaced" font to prevent Linux fallback width overflow & ellipsis clipping
+// Use Text + Java's logical "Monospaced" font to prevent Linux fallback width overflow & ellipsis clipping
         Text titleText = new Text(asciiLogo);
         titleText.setFont(Font.font("Monospaced", FontWeight.BOLD, 11.5));
         titleText.setFill(Color.web("#00FFCC"));
@@ -50,6 +50,7 @@ public class MenuScene {
         Button marathonBtn = new Button("MARATHON");
         Button ultraBtn = new Button("ULTRA");
         Button masterBtn = new Button("MASTER");
+        Button master11Btn = new Button("MASTER 1.1");
         Button overdriveBtn = new Button("OVERDRIVE");
         Button settingsBtn = new Button("SETTINGS");
 
@@ -57,20 +58,22 @@ public class MenuScene {
         marathonBtn.setOnAction(e -> manager.showModeDetail(GameMode.MARATHON));
         ultraBtn.setOnAction(e -> manager.showModeDetail(GameMode.ULTRA));
         masterBtn.setOnAction(e -> manager.showModeDetail(GameMode.MASTER));
+        master11Btn.setOnAction(e -> manager.showModeDetail(GameMode.MASTER_11));
         overdriveBtn.setOnAction(e -> manager.showModeDetail(GameMode.OVERDRIVE));
 
         styleButton(sprintBtn, "#00c8c8", "#00e1e1");
         styleButton(marathonBtn, "#66BB6A", "#81C784");
         styleButton(ultraBtn, "#FFA726", "#FFB74D");
         styleButton(masterBtn, "#42A5F5", "#64B5F6");
+        styleButton(master11Btn, "#AB47BC", "#BA68C8");
         styleButton(overdriveBtn, "#EF5350", "#E57373");
         styleButton(settingsBtn, "#424242", "#616161");
 
 
 
         // 3. Layout
-        VBox root = new VBox(15, titleText, sprintBtn, marathonBtn, masterBtn, ultraBtn, overdriveBtn, settingsBtn);
-        root.setStyle("-fx-background-color: #1A1A1A; -fx-padding: 30;");
+        VBox root = new VBox(12, titleText, sprintBtn, marathonBtn, ultraBtn, masterBtn, master11Btn, overdriveBtn, settingsBtn);
+        root.setStyle("-fx-background-color: #1A1A1A; -fx-padding: 25;");
         root.setAlignment(Pos.CENTER);
 
         this.scene = new Scene(root, WIDTH, HEIGHT);
@@ -82,7 +85,6 @@ public class MenuScene {
             );
             manager.setScene(keyConfigScene.getScene());
         });
-
     }
 
     private void styleButton(Button btn, String bgColor, String hoverColor) {
@@ -91,7 +93,7 @@ public class MenuScene {
                         "-fx-font-weight: bold; " +
                         "-fx-text-fill: white; " +
                         "-fx-pref-width: 220px; " +
-                        "-fx-pref-height: 45px; " +
+                        "-fx-pref-height: 42px; " +
                         "-fx-background-radius: 8px; " +
                         "-fx-cursor: hand; ";
 
